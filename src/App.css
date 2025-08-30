@@ -1,0 +1,1394 @@
+/* Ana Container */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: all 0.3s ease;
+}
+
+/* CSS Değişkenleri - Aydınlık Tema */
+:root {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f9fafb;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #374151;
+  --border-color: #e5e7eb;
+  --border-color-light: rgba(255, 255, 255, 0.1);
+  --sidebar-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  --card-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Karanlık Tema */
+.dark {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #e5e7eb;
+  --border-color: #4b5563;
+  --border-color-light: rgba(255, 255, 255, 0.1);
+  --sidebar-gradient: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  --card-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  background: var(--sidebar-gradient);
+  color: white;
+  padding: 0;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 30px 25px;
+  border-bottom: 1px solid var(--border-color-light);
+  text-align: center;
+}
+
+.sidebar-header h1 {
+  margin: 0 0 5px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.sidebar-header p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 15px 25px;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: 1rem;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding-left: 35px;
+}
+
+.nav-item.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-right: 4px solid white;
+  font-weight: 600;
+}
+
+.nav-icon {
+  margin-right: 12px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Profil Bölümü */
+.sidebar-profile {
+  padding: 20px 25px;
+  border-top: 1px solid var(--border-color-light);
+  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.profile-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #3b82f6, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.profile-info {
+  flex: 1;
+  text-align: left;
+}
+
+.profile-name {
+  font-weight: 600;
+  margin: 0 0 2px 0;
+}
+
+.profile-role {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.profile-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 20px;
+  right: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  z-index: 1001;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.profile-dropdown-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.profile-dropdown-item .nav-icon {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+}
+
+/* Tema Değiştirici */
+.theme-switcher {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 50px;
+  padding: 12px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.theme-switcher:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.theme-switch {
+  position: relative;
+  width: 60px;
+  height: 30px;
+  background: var(--border-color);
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.theme-switch.active {
+  background: #3b82f6;
+}
+
+.theme-switch-handle {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbbf24;
+}
+
+.theme-switch.active .theme-switch-handle {
+  transform: translateX(30px);
+  color: #1f2937;
+}
+
+.theme-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Ana İçerik */
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 30px;
+  overflow-x: hidden;
+  background-color: var(--bg-primary);
+  transition: all 0.3s ease;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 5px 0;
+}
+
+.page-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Range switcher */
+.range-switcher {
+  display: inline-flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 4px;
+  box-shadow: var(--card-shadow);
+}
+
+.range-btn {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.range-btn:hover {
+  transform: translateY(-1px);
+}
+
+.range-btn.active {
+  background: #3b82f6;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.22);
+}
+
+/* İstatistik Kartları */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  border-left: 4px solid;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.stat-revenue {
+  border-left-color: #3b82f6;
+}
+
+.stat-profit {
+  border-left-color: #10b981;
+}
+
+.stat-orders {
+  border-left-color: #f59e0b;
+}
+
+.stat-cost {
+  border-left-color: #ef4444;
+}
+
+.stat-tax {
+  border-left-color: #8b5cf6;
+}
+
+.stat-content {
+  display: flex;
+  align-items: center;
+}
+
+.stat-icon {
+  margin-right: 15px;
+  width: 32px;
+  height: 32px;
+  color: var(--text-secondary);
+}
+
+.stat-revenue .stat-icon { color: #3b82f6; }
+.stat-profit .stat-icon { color: #10b981; }
+.stat-orders .stat-icon { color: #f59e0b; }
+.stat-cost .stat-icon { color: #ef4444; }
+.stat-tax .stat-icon { color: #8b5cf6; }
+
+.stat-label {
+  margin: 0 0 5px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Content Card */
+.content-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.content-header {
+  padding: 25px 30px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-tertiary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.content-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Sıralama Kontrolleri */
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sort-controls label {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.sort-select {
+  padding: 8px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.content-body {
+  padding: 30px;
+}
+
+/* Sipariş Alt Sekmeleri */
+.sub-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 25px;
+}
+
+.sub-tab {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.sub-tab:hover {
+  color: var(--text-tertiary);
+}
+
+.sub-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
+}
+
+/* Form Elementleri */
+.add-product-form {
+  background-color: var(--bg-tertiary);
+  padding: 25px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border: 1px solid var(--border-color);
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+}
+
+.form-input {
+  flex: 1;
+  min-width: 150px;
+  max-width: 200px;
+  padding: 12px 15px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Butonlar */
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-icon {
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #059669;
+  transform: translateY(-1px);
+}
+
+.btn-large {
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  margin-top: 20px;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.btn-edit {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-edit:hover {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+.btn-save {
+  background: none;
+  border: none;
+  color: #10b981;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-save:hover {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.btn-cancel {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.edit-input {
+  width: 80px;
+  padding: 4px 8px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Tablo */
+.table-container {
+  overflow-x: auto;
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.products-table th {
+  background-color: var(--bg-tertiary);
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.products-table td {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.products-table tr:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.products-table .profit {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Favori Butonları */
+.favorite-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-btn:hover {
+  background-color: #fef3c7;
+}
+
+.favorite-btn-small {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.favorite-btn-small:hover {
+  background-color: #fef3c7;
+}
+
+.star-filled {
+  color: #fbbf24;
+}
+
+.star-empty {
+  color: #d1d5db;
+}
+
+.star-empty:hover {
+  color: #fbbf24;
+}
+
+.favorite-product {
+  font-weight: 600;
+  color: #d97706;
+}
+
+/* Ürün Kartları */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.product-card {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.product-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow);
+}
+
+.product-card-favorite {
+  background: linear-gradient(135deg, #fef3c7, #fbbf24);
+  border-color: #f59e0b;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.2);
+}
+
+.product-card-favorite:hover {
+  border-color: #d97706;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+}
+
+.product-card-low-stock {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border-color: #f87171;
+  box-shadow: 0 2px 10px rgba(248, 113, 113, 0.2);
+}
+
+.product-card-low-stock:hover {
+  border-color: #ef4444;
+  box-shadow: 0 4px 20px rgba(248, 113, 113, 0.3);
+}
+
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.product-card h3 {
+  margin: 0 0 10px 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+
+.product-price {
+  color: var(--text-secondary);
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+}
+
+.product-stock {
+  color: var(--text-secondary);
+  margin: 0 0 15px 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.stock-warning {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 10px;
+  border: 1px solid #fecaca;
+}
+
+.low-stock {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.quantity-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quantity-input label {
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.quantity-field {
+  width: 80px;
+  padding: 8px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 1rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.quantity-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Sipariş Geçmişi */
+.no-orders {
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.order-card:hover {
+  box-shadow: var(--card-shadow);
+  transform: translateY(-1px);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.order-info h3 {
+  margin: 0 0 5px 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.order-date {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.order-summary {
+  text-align: right;
+}
+
+.order-total {
+  margin: 0 0 5px 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.order-profit {
+  margin: 0;
+  color: #059669;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.order-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  color: var(--text-tertiary);
+}
+
+/* Bildirim */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1001;
+  animation: slideInRight 0.3s ease-out;
+}
+
+.notification-content {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  min-width: 200px;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile Sidebar */
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1002;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Modern Grafik Tasarımı */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.recharts-wrapper {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  min-height: 320px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recharts-wrapper svg {
+  overflow: visible !important;
+}
+
+/* Grafik Başlığı ve Metrikleri */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.chart-metrics {
+  display: flex;
+  gap: 24px;
+  align-items: baseline;
+}
+
+.chart-count {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+  margin: 0;
+}
+
+.chart-revenue {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+  margin: 0;
+}
+
+.chart-subtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 4px 0 0 0;
+  font-weight: 500;
+}
+
+.chart-growth {
+  font-size: 0.8rem;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* Grafik Period Butonları */
+.chart-period-buttons {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.period-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.period-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.period-btn.active {
+  background: rgba(59, 130, 246, 0.8);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Recharts Özelleştirmeleri */
+.recharts-cartesian-grid line {
+  stroke: rgba(255, 255, 255, 0.05) !important;
+  stroke-dasharray: 3 3;
+}
+
+.recharts-cartesian-axis-tick text {
+  fill: rgba(255, 255, 255, 0.5) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+.recharts-cartesian-axis line {
+  stroke: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Ana çizgi (mavi) */
+.recharts-line-curve {
+  stroke: #3b82f6 !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
+}
+
+/* Nokta stilizasyonu */
+.recharts-dot {
+  fill: #3b82f6 !important;
+  stroke: #1e293b !important;
+  stroke-width: 3px !important;
+  r: 4 !important;
+}
+
+.recharts-active-dot {
+  fill: #60a5fa !important;
+  stroke: #3b82f6 !important;
+  stroke-width: 2px !important;
+  r: 6 !important;
+  filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.8));
+}
+
+/* Tooltip */
+.recharts-tooltip-wrapper {
+  z-index: 1000 !important;
+}
+
+.recharts-default-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.recharts-tooltip-label {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+}
+
+.recharts-tooltip-item {
+  color: #60a5fa !important;
+  font-weight: 600 !important;
+}
+
+/* Alan grafiği için gradient */
+.chart-area-gradient {
+  stop-color: #3b82f6;
+}
+
+.chart-area-gradient-start {
+  stop-opacity: 0.3;
+}
+
+.chart-area-gradient-end {
+  stop-opacity: 0;
+}
+
+/* Karanlık tema için özel ayarlamalar */
+.dark .recharts-wrapper {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive Grafik Ayarları */
+@media (max-width: 768px) {
+  .recharts-wrapper {
+    padding: 16px;
+    min-height: 280px;
+  }
+  
+  .chart-metrics {
+    gap: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .chart-count,
+  .chart-revenue {
+    font-size: 2rem;
+  }
+  
+  .chart-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* Sipariş Düzenleme - Tarih Input */
+.order-date-input {
+  padding: 8px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.order-date-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Sipariş Düzenleme - Adet Input */
+.quantity-edit-input {
+  width: 80px;
+  padding: 6px 10px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  text-align: center;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quantity-edit-input:focus {
+  outline: none;
+  border-color: #10b981; /* yeşil vurgulu */
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* Sipariş Düzenleme Satırları */
+.order-item-edit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.order-item-edit:last-child {
+  border-bottom: none;
+}
+
+.order-item-edit .item-name {
+  font-weight: 600;
+}
+
+/* Responsive Tasarım */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay.show {
+    display: block;
+  }
+  
+  .mobile-menu-btn {
+    display: block;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+    padding-top: 80px;
+    padding-bottom: 100px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .form-input {
+    max-width: none;
+  }
+  
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .order-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .order-summary {
+    text-align: left;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .theme-switcher {
+    bottom: 15px;
+    right: 15px;
+  }
+
+  /* Mobile için grafik düzenlemesi */
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .recharts-wrapper {
+    padding: 16px;
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1440px) {
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1441px) {
+  .charts-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 15px;
+    padding-top: 80px;
+    padding-bottom: 100px;
+  }
+  
+  .content-body {
+    padding: 20px;
+  }
+  
+  .stat-card {
+    padding: 20px;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .recharts-wrapper {
+    padding: 12px;
+    min-height: 220px;
+  }
+}
+
+/* Grafik özel düzenlemeleri */
+.recharts-cartesian-grid line {
+  stroke: var(--border-color);
+  stroke-opacity: 0.3;
+}
+
+.recharts-tooltip-wrapper {
+  z-index: 10 !important;
+}
+
+.recharts-legend-wrapper {
+  position: relative !important;
+  z-index: 5 !important;
+}
