@@ -1,5 +1,6 @@
 // PART 1 - Başlangıç, state, helper fonksiyonlar, veri hazırlama
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, 
   Package, 
@@ -27,15 +28,32 @@ import {
 
 import './App.css';
 
+// Firebase
+import { auth, db } from "./firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp
+} from "firebase/firestore";
+
+// Auth komponenti
+import AuthPage from "./components/Authpage";
+
+
 function App() {
   /* -------------------------
      STATE & REFS (her zaman en üstte)
      ------------------------- */
-  const [products, setProducts] = useState([
-    { id: 1, name: 'Döner', costPrice: 15, sellPrice: 25, taxRate: 18, stock: 50, isFavorite: false },
-    { id: 2, name: 'Lahmacun', costPrice: 8, sellPrice: 15, taxRate: 18, stock: 30, isFavorite: false },
-    { id: 3, name: 'Ayran', costPrice: 2, sellPrice: 5, taxRate: 8, stock: 100, isFavorite: false }
-  ]);
+  const [products, setProducts] = useState([]);
+  const [user, setUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [activeSubTab, setActiveSubTab] = useState('new-order');
@@ -59,6 +77,7 @@ function App() {
   // Yeni özellik: günlük / aylık / yıllık görünüm
   const [range, setRange] = useState('daily'); // 'daily' | 'monthly' | 'yearly'
   const rangeLabel = range === 'daily' ? 'Günlük' : range === 'monthly' ? 'Aylık' : 'Yıllık';
+
 
   /* -------------------------
      THEME: localStorage ile sakla
@@ -96,6 +115,55 @@ function App() {
     };
   }, [profileDropdownOpen]);
 
+  // Firebase - Kullanıcı giriş/çıkış dinleyici
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoadingAuth(false);
+    });
+    return () => unsub();
+  }, []);
+
+  // Firebase - Kullanıcıya özel ürünleri dinle
+  useEffect(() => {
+    if (!user) {
+      setProducts([]);
+      return;
+    }
+
+    const productsRef = collection(db, "users", user.uid, "products");
+    const q = query(productsRef, orderBy("createdAt", "desc"));
+
+    const unsub = onSnapshot(q, (snap) => {
+      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setProducts(arr);
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  // Firebase - Kullanıcıya özel siparişleri dinle
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+
+    const ordersRef = collection(db, "users", user.uid, "orders");
+    const q = query(ordersRef, orderBy("createdAt", "desc"));
+
+    const unsub = onSnapshot(q, (snap) => {
+      const arr = snap.docs.map((d) => ({ 
+        id: d.id, 
+        ...d.data(),
+        date: d.data().date?.toDate() || new Date() // Firestore timestamp'i Date'e çevir
+      }));
+      setOrders(arr);
+    });
+
+    return () => unsub();
+  }, [user]);
+
   /* -------------------------
      NOTIFICATION
      ------------------------- */
@@ -112,42 +180,97 @@ function App() {
   /* -------------------------
      PRODUCT CRUD
      ------------------------- */
-  const addProduct = () => {
+  // Firebase - Ürün ekle
+  const addProduct = async () => {
     if (!newProduct.name || !newProduct.costPrice || !newProduct.sellPrice || !newProduct.taxRate || !newProduct.stock) {
       showNotification('Lütfen tüm ürün alanlarını doldurun.');
       return;
     }
-    const p = {
-      id: Date.now(),
-      name: newProduct.name,
-      costPrice: parseFloat(newProduct.costPrice),
-      sellPrice: parseFloat(newProduct.sellPrice),
-      taxRate: parseFloat(newProduct.taxRate),
-      stock: parseInt(newProduct.stock),
-      isFavorite: false
-    };
-    setProducts(prev => [...prev, p]);
-    setNewProduct({ name: '', costPrice: '', sellPrice: '', taxRate: '', stock: '' });
-    showNotification('Ürün eklendi!');
+    if (!user) {
+      showNotification("Önce giriş yapmalısınız.");
+      return;
+    }
+
+    try {
+      const ref = collection(db, "users", user.uid, "products");
+      await addDoc(ref, {
+        name: newProduct.name,
+        costPrice: parseFloat(newProduct.costPrice),
+        sellPrice: parseFloat(newProduct.sellPrice),
+        taxRate: parseFloat(newProduct.taxRate),
+        stock: parseInt(newProduct.stock),
+        isFavorite: false,
+        createdAt: serverTimestamp()
+      });
+
+      setNewProduct({ name: '', costPrice: '', sellPrice: '', taxRate: '', stock: '' });
+      showNotification('Ürün eklendi!');
+    } catch (error) {
+      console.error("Ürün ekleme hatası:", error);
+      showNotification('Ürün eklenirken hata oluştu.');
+    }
   };
 
-  const toggleFavorite = (productId) => {
-    setProducts(prev => prev.map(product => product.id === productId ? { ...product, isFavorite: !product.isFavorite } : product));
+  // Firebase - Favori değiştir
+  const toggleFavorite = async (productId, currentValue) => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, "users", user.uid, "products", productId);
+      await updateDoc(docRef, { isFavorite: !currentValue });
+    } catch (error) {
+      console.error("Favori güncelleme hatası:", error);
+      showNotification('Favori durumu güncellenirken hata oluştu.');
+    }
   };
 
-  const deleteProduct = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-    showNotification('Ürün silindi!');
+  // Firebase - Ürün sil
+  const deleteProduct = async (id) => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, "users", user.uid, "products", id);
+      await deleteDoc(docRef);
+      showNotification('Ürün silindi!');
+    } catch (error) {
+      console.error("Ürün silme hatası:", error);
+      showNotification('Ürün silinirken hata oluştu.');
+    }
+  };
+
+  // Firebase - Ürün güncelle
+  const saveEditProduct = async () => {
+    if (!editForm.name || !editForm.costPrice || !editForm.sellPrice || !editForm.taxRate || !editForm.stock) {
+      showNotification('Lütfen tüm alanları doldurun.');
+      return;
+    }
+    if (!user) return;
+
+    try {
+      const docRef = doc(db, "users", user.uid, "products", editingProduct);
+      await updateDoc(docRef, {
+        name: editForm.name,
+        costPrice: parseFloat(editForm.costPrice),
+        sellPrice: parseFloat(editForm.sellPrice),
+        taxRate: parseFloat(editForm.taxRate),
+        stock: parseInt(editForm.stock)
+      });
+
+      setEditingProduct(null);
+      setEditForm({ name: '', costPrice: '', sellPrice: '', taxRate: '', stock: '' });
+      showNotification('Ürün güncellendi!');
+    } catch (error) {
+      console.error("Ürün güncelleme hatası:", error);
+      showNotification('Ürün güncellenirken hata oluştu.');
+    }
   };
 
   /* -------------------------
      ORDER CRUD
      ------------------------- */
-  const addOrder = () => {
+  const addOrder = async () => {
     const orderItems = Object.entries(selectedProducts)
       .filter(([_, quantity]) => quantity > 0)
       .map(([productId, quantity]) => {
-        const product = products.find(p => p.id === parseInt(productId));
+        const product = products.find(p => p.id === productId);
         if (!product) return null;
         if (product.stock < quantity) {
           showNotification(`${product.name} için yeterli stok yok! (Mevcut: ${product.stock})`);
@@ -174,43 +297,70 @@ function App() {
       return;
     }
 
+    if (!user) {
+      showNotification("Önce giriş yapmalısınız.");
+      return;
+    }
+
     const order = {
-      id: Date.now(),
       date: new Date(),
       items: orderItems,
       totalRevenue: orderItems.reduce((s,i) => s + i.totalRevenue, 0),
       totalCost: orderItems.reduce((s,i) => s + i.totalCost, 0),
       totalTax: orderItems.reduce((s,i) => s + i.totalTax, 0),
+      createdAt: serverTimestamp()
     };
     order.profit = order.totalRevenue - order.totalCost;
 
-    // Stok güncelle
-    const updatedProducts = products.map(product => {
-      const item = orderItems.find(it => it.productId === product.id);
-      if (item) {
-        return { ...product, stock: product.stock - item.quantity };
-      }
-      return product;
-    });
+    try {
+      // Siparişi Firebase'e kaydet
+      const ordersRef = collection(db, "users", user.uid, "orders");
+      await addDoc(ordersRef, order);
 
-    setProducts(updatedProducts);
-    setOrders(prev => [...prev, order]);
-    setSelectedProducts({});
-    showNotification('Sipariş eklendi!');
+      // Stokları güncelle
+      for (const item of orderItems) {
+        const productDocRef = doc(db, "users", user.uid, "products", item.productId);
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          await updateDoc(productDocRef, {
+            stock: product.stock - item.quantity
+          });
+        }
+      }
+
+      setSelectedProducts({});
+      showNotification('Sipariş eklendi!');
+    } catch (error) {
+      console.error("Sipariş ekleme hatası:", error);
+      showNotification('Sipariş eklenirken hata oluştu.');
+    }
   };
 
-  const deleteOrder = (id) => {
-    const orderToDelete = orders.find(o => o.id === id);
-    if (!orderToDelete) return;
-    // stok geri yükle
-    const updatedProducts = products.map(product => {
-      const item = orderToDelete.items.find(i => i.productId === product.id);
-      if (item) return { ...product, stock: product.stock + item.quantity };
-      return product;
-    });
-    setProducts(updatedProducts);
-    setOrders(prev => prev.filter(o => o.id !== id));
-    showNotification('Sipariş silindi!');
+  const deleteOrder = async (orderId) => {
+    const orderToDelete = orders.find(o => o.id === orderId);
+    if (!orderToDelete || !user) return;
+
+    try {
+      // Siparişi Firebase'den sil
+      const orderDocRef = doc(db, "users", user.uid, "orders", orderId);
+      await deleteDoc(orderDocRef);
+
+      // Stokları geri yükle
+      for (const item of orderToDelete.items) {
+        const productDocRef = doc(db, "users", user.uid, "products", item.productId);
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          await updateDoc(productDocRef, {
+            stock: product.stock + item.quantity
+          });
+        }
+      }
+
+      showNotification('Sipariş silindi!');
+    } catch (error) {
+      console.error("Sipariş silme hatası:", error);
+      showNotification('Sipariş silinirken hata oluştu.');
+    }
   };
 
   /* -------------------------
@@ -222,73 +372,74 @@ function App() {
     setEditOrderDate(new Date(order.date).toISOString().slice(0,16));
   };
 
-  const saveEditOrder = () => {
-    if (!editingOrder) return;
+  const saveEditOrder = async () => {
+    if (!editingOrder || !user) return;
     const originalOrder = orders.find(o => o.id === editingOrder);
     if (!originalOrder) return;
 
-    // eski siparişin stok etkisini geri al
-    let updatedProducts = products.map(product => {
-      const originalItem = originalOrder.items.find(i => i.productId === product.id);
-      if (originalItem) {
-        return { ...product, stock: product.stock + originalItem.quantity };
+    try {
+      // Önce stok kontrolü yap
+      for (const item of editOrderForm) {
+        const product = products.find(p => p.id === item.productId);
+        const originalItem = originalOrder.items.find(i => i.productId === item.productId);
+        const stockDifference = item.quantity - (originalItem ? originalItem.quantity : 0);
+        
+        if (product && product.stock < stockDifference) {
+          showNotification(`${item.productName} için yeterli stok yok!`);
+          return;
+        }
       }
-      return product;
-    });
 
-    // stok kontrolü
-    for (const item of editOrderForm) {
-      const product = updatedProducts.find(p => p.id === item.productId);
-      if (!product || product.stock < item.quantity) {
-        showNotification(`${item.productName} için yeterli stok yok! (Mevcut: ${product ? product.stock : 0})`);
-        return;
-      }
-    }
+      // Siparişi güncelle
+      const updatedItems = editOrderForm.map(item => {
+        const totalRevenue = item.sellPrice * item.quantity;
+        const totalTax = totalRevenue * (item.taxRate / 100);
+        return {
+          ...item,
+          totalRevenue,
+          totalTax,
+          totalCost: item.costPrice * item.quantity
+        };
+      });
 
-    // stokları yeni değerlere göre ayarla
-    updatedProducts = updatedProducts.map(product => {
-      const newItem = editOrderForm.find(i => i.productId === product.id);
-      if (newItem) {
-        return { ...product, stock: product.stock - newItem.quantity };
-      }
-      return product;
-    });
+      const totalRevenue = updatedItems.reduce((s,i) => s + i.totalRevenue, 0);
+      const totalCost = updatedItems.reduce((s,i) => s + i.totalCost, 0);
+      const totalTax = updatedItems.reduce((s,i) => s + i.totalTax, 0);
 
-    // siparişi güncelle
-    const updatedItems = editOrderForm.map(item => {
-      const totalRevenue = item.sellPrice * item.quantity;
-      const totalTax = totalRevenue * (item.taxRate / 100);
-      return {
-        ...item,
-        totalRevenue,
-        totalTax,
-        totalCost: item.costPrice * item.quantity
-      };
-    });
-
-    const totalRevenue = updatedItems.reduce((s,i) => s + i.totalRevenue, 0);
-    const totalCost = updatedItems.reduce((s,i) => s + i.totalCost, 0);
-    const totalTax = updatedItems.reduce((s,i) => s + i.totalTax, 0);
-
-    const updatedOrders = orders.map(o => {
-      if (o.id !== editingOrder) return o;
-      return {
-        ...o,
+      const orderDocRef = doc(db, "users", user.uid, "orders", editingOrder);
+      await updateDoc(orderDocRef, {
         date: new Date(editOrderDate),
         items: updatedItems,
         totalRevenue,
         totalCost,
         totalTax,
         profit: totalRevenue - totalCost
-      };
-    });
+      });
 
-    setProducts(updatedProducts);
-    setOrders(updatedOrders);
-    setEditingOrder(null);
-    setEditOrderForm([]);
-    setEditOrderDate('');
-    showNotification('Sipariş güncellendi!');
+      // Stok farklarını güncelle
+      for (const item of editOrderForm) {
+        const originalItem = originalOrder.items.find(i => i.productId === item.productId);
+        const stockDifference = item.quantity - (originalItem ? originalItem.quantity : 0);
+        
+        if (stockDifference !== 0) {
+          const productDocRef = doc(db, "users", user.uid, "products", item.productId);
+          const product = products.find(p => p.id === item.productId);
+          if (product) {
+            await updateDoc(productDocRef, {
+              stock: product.stock - stockDifference
+            });
+          }
+        }
+      }
+
+      setEditingOrder(null);
+      setEditOrderForm([]);
+      setEditOrderDate('');
+      showNotification('Sipariş güncellendi!');
+    } catch (error) {
+      console.error("Sipariş güncelleme hatası:", error);
+      showNotification('Sipariş güncellenirken hata oluştu.');
+    }
   };
 
   const cancelEditOrder = () => {
@@ -311,27 +462,21 @@ function App() {
     });
   };
 
-  const saveEditProduct = () => {
-    if (!editForm.name || !editForm.costPrice || !editForm.sellPrice || !editForm.taxRate || !editForm.stock) {
-      showNotification('Lütfen tüm alanları doldurun.');
-      return;
-    }
-    setProducts(prev => prev.map(p => p.id === editingProduct ? {
-      ...p,
-      name: editForm.name,
-      costPrice: parseFloat(editForm.costPrice),
-      sellPrice: parseFloat(editForm.sellPrice),
-      taxRate: parseFloat(editForm.taxRate),
-      stock: parseInt(editForm.stock)
-    } : p));
-    setEditingProduct(null);
-    setEditForm({ name: '', costPrice: '', sellPrice: '', taxRate: '', stock: '' });
-    showNotification('Ürün güncellendi!');
-  };
-
   const cancelEditProduct = () => {
     setEditingProduct(null);
     setEditForm({ name: '', costPrice: '', sellPrice: '', taxRate: '', stock: '' });
+  };
+
+  // Logout fonksiyonu
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setProfileDropdownOpen(false);
+      showNotification('Çıkış yapıldı!');
+    } catch (error) {
+      console.error("Çıkış hatası:", error);
+      showNotification('Çıkış yapılırken hata oluştu.');
+    }
   };
 
   /* -------------------------
@@ -460,8 +605,26 @@ function App() {
 
   const pageInfo = getPageInfo();
 
-  /* PART 1 END - daha sonra return JSX gelecek */
-    /* -------------------------
+  if (loadingAuth) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '1.2rem',
+        color: '#6b7280'
+      }}>
+        Yükleniyor...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  /* -------------------------
      RENDER (JSX)
      ------------------------- */
   return (
@@ -495,9 +658,9 @@ function App() {
 
         <div className="sidebar-profile" ref={profileRef}>
           <button className="profile-button" onClick={() => setProfileDropdownOpen(v => !v)} aria-expanded={profileDropdownOpen}>
-            <div className="profile-avatar">A</div>
+            <div className="profile-avatar">{user?.email?.charAt(0).toUpperCase() || 'U'}</div>
             <div className="profile-info">
-              <div className="profile-name">Admin User</div>
+              <div className="profile-name">{user?.email || 'Kullanıcı'}</div>
               <div className="profile-role">Yönetici</div>
             </div>
             <ChevronUp size={16} style={{ transform: profileDropdownOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s ease' }} />
@@ -507,7 +670,7 @@ function App() {
             <div className="profile-dropdown">
               <button className="profile-dropdown-item"><User className="nav-icon" /> Profil Bilgileri</button>
               <button className="profile-dropdown-item"><Settings className="nav-icon" /> Ayarlar</button>
-              <button className="profile-dropdown-item"><LogOut className="nav-icon" /> Çıkış Yap</button>
+              <button className="profile-dropdown-item" onClick={handleLogout}><LogOut className="nav-icon" /> Çıkış Yap</button>
             </div>
           )}
         </div>
@@ -672,7 +835,7 @@ function App() {
                         return (
                           <tr key={product.id}>
                             <td>
-                              <button onClick={() => toggleFavorite(product.id)} className="favorite-btn" aria-label={product.isFavorite ? 'Favoriden çıkar' : 'Favoriye ekle'}>
+                              <button onClick={() => toggleFavorite(product.id, product.isFavorite)} className="favorite-btn" aria-label={product.isFavorite ? 'Favoriden çıkar' : 'Favoriye ekle'}>
                                 <Star size={20} className={product.isFavorite ? 'star-filled' : 'star-empty'} fill={product.isFavorite ? '#fbbf24' : 'none'} />
                               </button>
                             </td>
@@ -726,7 +889,7 @@ function App() {
                       <div key={product.id} className={`product-card ${product.isFavorite ? 'product-card-favorite' : ''} ${product.stock <= 10 ? 'product-card-low-stock' : ''}`}>
                         <div className="product-header">
                           <h3>{product.name}</h3>
-                          <button onClick={() => toggleFavorite(product.id)} className="favorite-btn-small" aria-label={product.isFavorite ? 'Favoriden çıkar' : 'Favoriye ekle'}>
+                          <button onClick={() => toggleFavorite(product.id, product.isFavorite)} className="favorite-btn-small" aria-label={product.isFavorite ? 'Favoriden çıkar' : 'Favoriye ekle'}>
                             <Star size={16} className={product.isFavorite ? 'star-filled' : 'star-empty'} fill={product.isFavorite ? '#fbbf24' : 'none'} />
                           </button>
                         </div>
