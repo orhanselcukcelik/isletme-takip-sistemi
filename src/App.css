@@ -40,6 +40,8 @@
 /* Sidebar */
 .sidebar {
   width: 280px;
+  min-width: 280px; /* Sabit genişlik için */
+  max-width: 280px; /* Sabit genişlik için */
   background: var(--sidebar-gradient);
   color: white;
   padding: 0;
@@ -56,18 +58,28 @@
   padding: 30px 25px;
   border-bottom: 1px solid var(--border-color-light);
   text-align: center;
+  min-height: 100px; /* Sabit yükseklik */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .sidebar-header h1 {
   margin: 0 0 5px 0;
   font-size: 1.5rem;
   font-weight: 700;
+  white-space: nowrap; /* Yazının taşmasını engelle */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Uzun yazıları ... ile göster */
 }
 
 .sidebar-header p {
   margin: 0;
   font-size: 0.9rem;
   opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-nav {
@@ -107,14 +119,16 @@
   margin-right: 12px;
   width: 20px;
   height: 20px;
+  flex-shrink: 0; /* İkonların küçülmesini engelle */
 }
 
-/* Profil Bölümü */
+/* Profil Bölümü - Sabit yükseklik ve genişlik */
 .sidebar-profile {
   padding: 20px 25px;
   border-top: 1px solid var(--border-color-light);
   background: rgba(255, 255, 255, 0.05);
   position: relative;
+  min-height: 80px; /* Sabit yükseklik */
 }
 
 .profile-button {
@@ -129,6 +143,7 @@
   border-radius: 8px;
   transition: all 0.3s ease;
   font-size: 1rem;
+  overflow: hidden; /* Taşan içerikleri gizle */
 }
 
 .profile-button:hover {
@@ -138,6 +153,7 @@
 .profile-avatar {
   width: 40px;
   height: 40px;
+  min-width: 40px; /* Küçülmeyi engelle */
   border-radius: 50%;
   background: linear-gradient(45deg, #3b82f6, #10b981);
   display: flex;
@@ -146,22 +162,32 @@
   margin-right: 12px;
   font-weight: 700;
   font-size: 1.1rem;
+  flex-shrink: 0; /* Avatar'ın küçülmesini engelle */
 }
 
 .profile-info {
   flex: 1;
   text-align: left;
+  min-width: 0; /* Flex öğesinin küçülmesine izin ver */
+  overflow: hidden;
 }
 
 .profile-name {
   font-weight: 600;
   margin: 0 0 2px 0;
+  white-space: nowrap; /* Tek satırda tut */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Uzun isimleri ... ile göster */
+  max-width: 100%;
 }
 
 .profile-role {
   font-size: 0.8rem;
   opacity: 0.7;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profile-dropdown {
@@ -289,6 +315,10 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 5px 0;
+  white-space: nowrap; /* Başlığın taşmasını engelle */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%; /* Maksimum genişlik */
 }
 
 .page-subtitle {
@@ -1721,4 +1751,100 @@
     width: 18px;
     height: 18px;
   }
+}
+
+.recharts-wrapper {
+  background: transparent;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.dark .recharts-wrapper {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recharts-wrapper:not(.dark) {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Recharts yazı renkleri - KESIN ÇÖZÜM */
+.recharts-cartesian-axis-tick-value tspan {
+  fill: #0f172a !important; /* Aydınlık temada koyu */
+}
+
+.dark .recharts-cartesian-axis-tick-value tspan {
+  fill: #E6EEF8 !important; /* Karanlık temada açık */
+}
+
+.recharts-legend-item-text {
+  fill: #0f172a !important;
+}
+
+.dark .recharts-legend-item-text {
+  fill: #E6EEF8 !important;
+}
+
+/* Tooltip yazıları */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: white !important;
+  color: #0f172a !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #1f2937 !important;
+  color: #E6EEF8 !important;
+  border: 1px solid #374151 !important;
+}
+
+/* Grid çizgileri (ızgara) */
+.recharts-cartesian-grid line {
+  stroke: #8098c9 !important; /* Aydınlık temada açık gri */
+}
+
+.dark .recharts-cartesian-grid line {
+  stroke: rgba(255,255,255,0.1) !important; /* Karanlık temada şeffaf beyaz */
+}
+
+/* Eksen çizgileri (X ve Y eksenleri) */
+.recharts-cartesian-axis line {
+  stroke: #d1d5db !important; /* Aydınlık temada gri */
+}
+
+.dark .recharts-cartesian-axis line {
+  stroke: #4b5563 !important; /* Karanlık temada koyu gri */
+}
+
+/* Eksen tick çizgileri (küçük çizgiler) */
+.recharts-cartesian-axis .recharts-cartesian-axis-tick line {
+  stroke: #9ca3af !important; /* Aydınlık temada orta gri */
+}
+
+.dark .recharts-cartesian-axis .recharts-cartesian-axis-tick line {
+  stroke: #6b7280 !important; /* Karanlık temada orta gri */
+}
+
+/* Grafik noktalarının kenarlık rengi */
+.recharts-line .recharts-dot {
+  stroke: white !important; /* Aydınlık temada beyaz kenarlık */
+  stroke-width: 2px !important;
+}
+
+.dark .recharts-line .recharts-dot {
+  stroke: #1f2937 !important; /* Karanlık temada koyu kenarlık */
+  stroke-width: 2px !important;
+}
+
+/* Aktif nokta (hover edildiğinde) */
+.recharts-line .recharts-active-dot {
+  stroke: white !important; /* Aydınlık temada beyaz kenarlık */
+  stroke-width: 3px !important;
+}
+
+.dark .recharts-line .recharts-active-dot {
+  stroke: #1f2937 !important; /* Karanlık temada koyu kenarlık */
+  stroke-width: 3px !important;
 }

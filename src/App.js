@@ -26,6 +26,9 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
+import useIsDarkMode from "./hooks/useIsDarkMode";   
+import { getChartTheme } from "./utils/chartTheme";
+
 import './App.css';
 
 // Firebase
@@ -53,6 +56,8 @@ function App() {
      ------------------------- */
   const [products, setProducts] = useState([]);
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState({ fullName: '', businessName: '' });
+
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -67,9 +72,8 @@ function App() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [editOrderForm, setEditOrderForm] = useState([]);
   const [editOrderDate, setEditOrderDate] = useState('');
-  const [isDarkTheme, setIsDarkTheme] = useState(() => {
-    try { return localStorage.getItem('theme') === 'dark'; } catch { return false; }
-  });
+  const isDarkMode = useIsDarkMode();
+  const chartTheme = getChartTheme(isDarkMode);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileRef = useRef(null);
   const notificationTimeoutRef = useRef(null);
@@ -82,18 +86,19 @@ function App() {
   /* -------------------------
      THEME: localStorage ile sakla
      ------------------------- */
-  useEffect(() => {
+
+  const toggleTheme = () => {
     const root = document.documentElement;
-    if (isDarkTheme) {
-      root.classList.add('dark');
-      try { localStorage.setItem('theme', 'dark'); } catch {}
-    } else {
+    const currentTheme = root.classList.contains('dark');
+    
+    if (currentTheme) {
       root.classList.remove('dark');
       try { localStorage.setItem('theme', 'light'); } catch {}
+    } else {
+      root.classList.add('dark');
+      try { localStorage.setItem('theme', 'dark'); } catch {}
     }
-  }, [isDarkTheme]);
-
-  const toggleTheme = () => setIsDarkTheme(v => !v);
+  };
 
   /* -------------------------
      PROFILE DROPDOWN: click outside & ESC
@@ -123,6 +128,26 @@ function App() {
     });
     return () => unsub();
   }, []);
+
+  // Firebase - Kullanıcı profili (fullName, businessName) dinle
+  useEffect(() => {
+    if (!user) {
+      setProfile({ fullName: '', businessName: '' });
+      return;
+    }
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubProfile = onSnapshot(userDocRef, (snap) => {
+      const d = snap.data() || {};
+      // console.log('profile snapshot', d);
+      setProfile({
+        fullName: d.ownerName || '',          // Artık direkt ownerName kullanıyoruz
+        businessName: d.businessName || ''    // businessName zaten doğru
+      });
+
+    }, (err) => { console.error('profile snapshot err', err); });
+    return () => unsubProfile();
+  }, [user]);
+
 
   // Firebase - Kullanıcıya özel ürünleri dinle
   useEffect(() => {
@@ -604,6 +629,11 @@ function App() {
   };
 
   const pageInfo = getPageInfo();
+  // Görüntülenecek isim/işletme başlığı
+  const displayName = profile.fullName || user?.displayName || (user?.email ? user.email.split('@')[0] : 'Kullanıcı');
+  const businessTitle = profile.businessName || 'İşletme Sistemi';
+  const avatarLetter = (displayName?.trim()?.[0] || 'U').toUpperCase();
+
 
   if (loadingAuth) {
     return (
@@ -640,7 +670,7 @@ function App() {
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <h1>İşletme Sistemi</h1>
+          <h1>{businessTitle}</h1>
           <p>Yönetim Paneli</p>
         </div>
 
@@ -658,9 +688,9 @@ function App() {
 
         <div className="sidebar-profile" ref={profileRef}>
           <button className="profile-button" onClick={() => setProfileDropdownOpen(v => !v)} aria-expanded={profileDropdownOpen}>
-            <div className="profile-avatar">{user?.email?.charAt(0).toUpperCase() || 'U'}</div>
+            <div className="profile-avatar">{avatarLetter}</div>
             <div className="profile-info">
-              <div className="profile-name">{user?.email || 'Kullanıcı'}</div>
+              <div className="profile-name">{displayName}</div>
               <div className="profile-role">Yönetici</div>
             </div>
             <ChevronUp size={16} style={{ transform: profileDropdownOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s ease' }} />
@@ -678,8 +708,8 @@ function App() {
 
       {/* Tema Değiştirici */}
       <div className="theme-switcher">
-        <div className={`theme-switch ${isDarkTheme ? 'active' : ''}`} onClick={toggleTheme} role="switch" aria-checked={isDarkTheme} aria-label="Tema değiştir">
-          <div className="theme-switch-handle">{isDarkTheme ? <Moon className="theme-icon" /> : <Sun className="theme-icon" />}</div>
+        <div className={`theme-switch ${isDarkMode ? 'active' : ''}`} onClick={toggleTheme} role="switch" aria-checked={isDarkMode} aria-label="Tema değiştir">
+          <div className="theme-switch-handle">{isDarkMode ? <Moon className="theme-icon" /> : <Sun className="theme-icon" />}</div>
         </div>
       </div>
 
@@ -749,12 +779,34 @@ function App() {
                   <div className="recharts-wrapper">
                     <ResponsiveContainer width="100%" height={280}>
                       <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="revenue" stroke="#3b82f6" name="Ciro" />
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                        <XAxis 
+                          dataKey="date" 
+                          axisLine={{ stroke: chartTheme.axis }}
+                          tickLine={{ stroke: chartTheme.axis }}
+                        />
+                        <YAxis 
+                          axisLine={{ stroke: chartTheme.axis }}
+                          tickLine={{ stroke: chartTheme.axis }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: chartTheme.tooltipBg,
+                            color: chartTheme.tooltipText,
+                            border: `1px solid ${chartTheme.axis}`,
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Legend wrapperStyle={{ color: chartTheme.text }} />
+                        <Line 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          stroke={chartTheme.series[0]} 
+                          name="Ciro"
+                          strokeWidth={2}
+                          dot={{ fill: chartTheme.series[0], strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: chartTheme.series[0] }}
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -767,7 +819,15 @@ function App() {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="profit" stroke="#10b981" name="Kar" />
+                        <Line 
+                          type="monotone" 
+                          dataKey="profit" 
+                          stroke={chartTheme.series[1]} 
+                          name="Kar"
+                          strokeWidth={2}
+                          dot={{ fill: chartTheme.series[1], strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: chartTheme.series[1] }}
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -780,7 +840,15 @@ function App() {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="orders" stroke="#f59e0b" name="Sipariş Sayısı" />
+                        <Line 
+                          type="monotone" 
+                          dataKey="orders" 
+                          stroke={chartTheme.series[3]} 
+                          name="Sipariş Sayısı"
+                          strokeWidth={2}
+                          dot={{ fill: chartTheme.series[3], strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: chartTheme.series[3] }}
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
