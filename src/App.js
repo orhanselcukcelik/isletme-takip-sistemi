@@ -14,7 +14,7 @@ import MobileMenuButton from "./components/Layout/MobileMenuButton";
 import Dashboard from "./components/Dashboard/Dashboard";
 import ProductManagement from "./components/Products/ProductManagement";
 import OrderManagement from "./components/Orders/OrderManagement";
-import AuthPage from "./components/Authpage";
+import AuthPage from "./components/Auth/Authpage";
 
 // Constants & utils
 import { TABS, ORDER_SUB_TABS, RANGES } from "./utils/constants";

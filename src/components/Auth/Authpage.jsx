@@ -1,6 +1,6 @@
 // src/components/AuthPage.js
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import { LogIn, UserPlus, Building, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const AuthPage = () => {
