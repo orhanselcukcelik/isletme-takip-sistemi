@@ -1,179 +1,99 @@
-// hooks/useAuth.js
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth, db } from '../firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from 'firebase/auth';
-import {
-  doc,
-  setDoc,
-  getDoc
-} from 'firebase/firestore';
+// src/hooks/useAuth.js
+// Bu hook tüm authentication işlemlerini yönetir
 
-const AuthContext = createContext();
+import { useState, useEffect } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  // Authentication state
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState({ fullName: '', businessName: '' });
   const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState(null);
 
-  // Kullanıcı girişi
-  const login = async (email, password) => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Kullanıcı profilini Firestore'dan al
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      if (userDoc.exists()) {
-        setUserProfile(userDoc.data());
-      }
-      
-      return userCredential;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw new Error('Giriş yapılırken hata oluştu: ' + error.message);
-    }
-  };
-
-  // Kullanıcı kaydı
-  const signup = async (email, password, businessName, ownerName) => {
-    try {
-      // Firebase Authentication ile kullanıcı oluştur
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Kullanıcı profilini Firestore'a kaydet
-      const userProfile = {
-        uid: user.uid,
-        email: user.email,
-        businessName: businessName,
-        ownerName: ownerName,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      await setDoc(doc(db, 'users', user.uid), userProfile);
-      setUserProfile(userProfile);
-
-      // Başlangıç ürünlerini ekle (isteğe bağlı)
-      const defaultProducts = [
-        {
-          name: 'Döner',
-          costPrice: 15,
-          sellPrice: 25,
-          taxRate: 18,
-          stock: 50,
-          isFavorite: false,
-          createdAt: new Date()
-        },
-        {
-          name: 'Lahmacun',
-          costPrice: 8,
-          sellPrice: 15,
-          taxRate: 18,
-          stock: 30,
-          isFavorite: false,
-          createdAt: new Date()
-        },
-        {
-          name: 'Ayran',
-          costPrice: 2,
-          sellPrice: 5,
-          taxRate: 8,
-          stock: 100,
-          isFavorite: false,
-          createdAt: new Date()
-        }
-      ];
-
-      // Her bir ürünü Firestore'a ekle
-      for (const product of defaultProducts) {
-        await setDoc(doc(db, 'users', user.uid, 'products', Date.now() + Math.random()), product);
-      }
-
-      return userCredential;
-    } catch (error) {
-      console.error('Signup error:', error);
-      
-      // Firebase hata mesajlarını Türkçe'ye çevir
-      let errorMessage = 'Kayıt olurken hata oluştu: ';
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'Bu e-posta adresi zaten kullanılıyor.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalı.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Geçersiz e-posta adresi.';
-          break;
-        default:
-          errorMessage += error.message;
-      }
-      
-      throw new Error(errorMessage);
-    }
-  };
-
-  // Çıkış yap
-  const logout = async () => {
-    try {
-      await signOut(auth);
-      setUserProfile(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw new Error('Çıkış yapılırken hata oluştu.');
-    }
-  };
-
-  // Kullanıcı durumunu dinle
+  // Firebase - Kullanıcı giriş/çıkış dinleyici
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      
-      if (user) {
-        // Kullanıcı girişli ise profilini al
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            setUserProfile(userDoc.data());
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-        }
-      } else {
-        setUserProfile(null);
-      }
-      
+    console.log('Auth listener başlatılıyor...');
+    
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('Auth durumu değişti:', currentUser ? 'Giriş yapıldı' : 'Çıkış yapıldı');
+      setUser(currentUser);
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      console.log('Auth listener kapatılıyor...');
+      unsubscribe();
+    };
   }, []);
 
-  const value = {
-    currentUser,
-    userProfile,
-    login,
-    signup,
-    logout,
-    loading
+  // Firebase - Kullanıcı profili dinleme
+  useEffect(() => {
+    if (!user) {
+      console.log('Kullanıcı yok, profil temizleniyor');
+      setProfile({ fullName: '', businessName: '' });
+      return;
+    }
+
+    console.log('Profil dinlenmeye başlanıyor:', user.uid);
+    
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
+      const data = snapshot.data() || {};
+      console.log('Profil güncellendi:', data);
+      
+      setProfile({
+        fullName: data.ownerName || '',
+        businessName: data.businessName || ''
+      });
+    }, (error) => {
+      console.error('Profil dinleme hatası:', error);
+    });
+
+    return () => {
+      console.log('Profil listener kapatılıyor...');
+      unsubscribe();
+    };
+  }, [user]);
+
+  // Çıkış yapma fonksiyonu
+  const logout = async () => {
+    console.log('Çıkış yapılıyor...');
+    
+    try {
+      await signOut(auth);
+      console.log('Çıkış başarılı');
+      return { success: true, message: 'Çıkış yapıldı!' };
+    } catch (error) {
+      console.error('Çıkış hatası:', error);
+      return { success: false, error: error.message };
+    }
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  // Kullanıcı bilgileri hesaplama
+  const displayName = profile.fullName || user?.displayName || (user?.email ? user.email.split('@')[0] : 'Kullanıcı');
+  const businessTitle = profile.businessName || 'İşletme Sistemi';
+  const avatarLetter = (displayName?.trim()?.[0] || 'U').toUpperCase();
+
+  // Hook'un döndürdüğü değerler
+  return {
+    // State
+    user,
+    profile,
+    loading,
+    
+    // Hesaplanmış değerler
+    displayName,
+    businessTitle,
+    avatarLetter,
+    
+    // Fonksiyonlar
+    logout,
+    
+    // Yardımcı
+    isAuthenticated: !!user
+  };
 };
+
+export default useAuth;
