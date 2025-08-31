@@ -2,9 +2,9 @@
 // Bu hook tüm authentication işlemlerini yönetir
 
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 export const useAuth = () => {
   // Authentication state
@@ -47,7 +47,53 @@ export const useAuth = () => {
       return { success: true, user: result.user };
     } catch (error) {
       console.error("Giriş hatası:", error);
-      return { success: false, error: error.message };
+      let errorMessage = 'Giriş yapılırken bir hata oluştu';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Hatalı şifre';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Geçersiz e-posta adresi';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin';
+      }
+      
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  // ✅ Kayıt olma fonksiyonu
+  const signup = async (email, password, businessName, ownerName) => {
+    try {
+      // Firebase Authentication ile kullanıcı oluştur
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+
+      // Kullanıcı profilini Firestore'a kaydet
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, {
+        ownerName: ownerName.trim(),
+        businessName: businessName.trim(),
+        email: email,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      return { success: true, user: user };
+    } catch (error) {
+      console.error("Kayıt hatası:", error);
+      let errorMessage = 'Kayıt olurken bir hata oluştu';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Bu e-posta adresi zaten kullanımda';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalıdır';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Geçersiz e-posta adresi';
+      }
+      
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -75,7 +121,8 @@ export const useAuth = () => {
     businessTitle,
     avatarLetter,
     // Fonksiyonlar
-    login,   // 👈 artık burada var
+    login,
+    signup,  // 👈 Eksik olan signup fonksiyonu eklendi
     logout,
     isAuthenticated: !!user
   };

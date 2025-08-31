@@ -1,4 +1,4 @@
-// src/components/AuthPage.js
+// src/components/Auth/AuthPage.js
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { LogIn, UserPlus, Building, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -24,8 +24,10 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
+      let result;
+      
       if (isLogin) {
-        await login(formData.email, formData.password);
+        result = await login(formData.email, formData.password);
       } else {
         // Kayıt için form validasyonu
         if (!formData.businessName.trim()) {
@@ -34,8 +36,20 @@ const AuthPage = () => {
         if (!formData.ownerName.trim()) {
           throw new Error('Sahip adı zorunludur.');
         }
-        await signup(formData.email, formData.password, formData.businessName.trim(), formData.ownerName.trim());
+        result = await signup(
+          formData.email, 
+          formData.password, 
+          formData.businessName.trim(), 
+          formData.ownerName.trim()
+        );
       }
+
+      // Eğer işlem başarısız olduysa hata mesajını göster
+      if (!result.success) {
+        setError(result.error);
+      }
+      // Başarılı olursa useAuth hook'u otomatik olarak kullanıcıyı yönlendirecek
+      
     } catch (error) {
       setError(error.message);
     } finally {
