@@ -1,10 +1,12 @@
 import React from "react";
 import { ShoppingCart, Star } from "lucide-react";
 import { isLowStock, formatCurrency } from "../../utils/calculations";
+import { ORDER_STATUS, ORDER_STATUS_LABELS } from "../../utils/constants";
 
 export default function NewOrder({
   products, selectedProducts, setSelectedProducts,
-  onToggleFavorite, onAddOrder, loading
+  onToggleFavorite, onAddOrder, loading,
+  newOrderStatus, setNewOrderStatus // Yeni prop'lar
 }) {
   return (
     <div className="content-card">
@@ -36,6 +38,33 @@ export default function NewOrder({
               {isLowStock(p.stock) && <div className="stock-warning">⚠️ Stok az!</div>}
             </div>
           ))}
+        </div>
+
+        {/* Yeni: Sipariş Durumu Seçici */}
+        <div className="order-status-section">
+          <h3>Sipariş Durumu</h3>
+          <div className="status-selector">
+            <label className="radio-option">
+              <input
+                type="radio"
+                name="orderStatus"
+                value={ORDER_STATUS.UNPAID}
+                checked={newOrderStatus === ORDER_STATUS.UNPAID}
+                onChange={(e) => setNewOrderStatus(e.target.value)}
+              />
+              <span className="radio-label">{ORDER_STATUS_LABELS[ORDER_STATUS.UNPAID]}</span>
+            </label>
+            <label className="radio-option">
+              <input
+                type="radio"
+                name="orderStatus"
+                value={ORDER_STATUS.PAID}
+                checked={newOrderStatus === ORDER_STATUS.PAID}
+                onChange={(e) => setNewOrderStatus(e.target.value)}
+              />
+              <span className="radio-label">{ORDER_STATUS_LABELS[ORDER_STATUS.PAID]}</span>
+            </label>
+          </div>
         </div>
 
         <button onClick={onAddOrder} className="btn btn-success btn-large" disabled={loading}>

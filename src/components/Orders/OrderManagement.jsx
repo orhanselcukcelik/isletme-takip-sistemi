@@ -8,7 +8,10 @@ export default function OrderManagement({
   products, selectedProducts, setSelectedProducts, onToggleFavorite,
   orders, ordersLoading,
   editingOrder, editOrderForm, setEditOrderForm, editOrderDate, setEditOrderDate,
-  onAddOrder, onDeleteOrder, onStartEditOrder, onSaveEditOrder, onCancelEditOrder
+  editOrderStatus, setEditOrderStatus, // Yeni prop'lar
+  newOrderStatus, setNewOrderStatus, // Yeni prop'lar
+  onAddOrder, onDeleteOrder, onStartEditOrder, onSaveEditOrder, onCancelEditOrder,
+  onToggleOrderStatus // Yeni prop
 }) {
   return (
     <div>
@@ -24,6 +27,7 @@ export default function OrderManagement({
           onToggleFavorite={onToggleFavorite}
           onAddOrder={onAddOrder}
           loading={ordersLoading}
+          newOrderStatus={newOrderStatus} setNewOrderStatus={setNewOrderStatus} // Yeni prop'lar
         />
       )}
 
@@ -33,10 +37,12 @@ export default function OrderManagement({
           editingOrder={editingOrder}
           editOrderForm={editOrderForm} setEditOrderForm={setEditOrderForm}
           editOrderDate={editOrderDate} setEditOrderDate={setEditOrderDate}
+          editOrderStatus={editOrderStatus} setEditOrderStatus={setEditOrderStatus} // Yeni prop'lar
           onStartEditOrder={onStartEditOrder}
           onSaveEditOrder={onSaveEditOrder}
           onCancelEditOrder={onCancelEditOrder}
           onDeleteOrder={onDeleteOrder}
+          onToggleOrderStatus={onToggleOrderStatus} // Yeni prop
         />
       )}
     </div>

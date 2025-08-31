@@ -34,6 +34,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [range, setRange] = useState(RANGES.DAILY);
+  const [customDateRange, setCustomDateRange] = useState(null); // Özel tarih aralığı state'i
 
   // Hooks
   const { user, profile, loading: authLoading, logout, displayName, businessTitle, avatarLetter } = useAuth();
@@ -43,12 +44,17 @@ export default function App() {
     newProduct, setNewProduct, editingProduct, editForm, setEditForm,
     addProduct, toggleFavorite, deleteProduct, startEditProduct, saveEditProduct, cancelEditProduct
   } = useProducts(user);
+  
+  // Güncellenmiş useOrders hook çağrısı - yeni state'leri dahil ettik
   const {
     orders, loading: ordersLoading, selectedProducts, setSelectedProducts,
     editingOrder, editOrderForm, setEditOrderForm, editOrderDate, setEditOrderDate,
+    editOrderStatus, setEditOrderStatus, // Yeni - düzenleme sırasındaki durum
+    newOrderStatus, setNewOrderStatus, // Yeni - yeni sipariş durumu
     addOrder, deleteOrder, startEditOrder, saveEditOrder, cancelEditOrder,
+    toggleOrderStatus, // Yeni - durum değiştirme fonksiyonu
     stats, chartData
-  } = useOrders(user, products);
+  } = useOrders(user, products, customDateRange, handleServiceResult); // customDateRange ve notification hook'u geçiriyoruz
 
   const isDarkMode = useIsDarkMode();
   const chartTheme = getChartTheme(isDarkMode);
@@ -63,31 +69,59 @@ export default function App() {
   const handleTabChange = (tab, subTab) => { setActiveTab(tab); if (subTab) setActiveSubTab(subTab); };
   const handleLogout = async () => { const r = await logout(); handleServiceResult(r); setProfileDropdownOpen(false); };
 
-  // Product
+  // Özel tarih işleyicileri
+  const handleCustomDateChange = (dateRange) => {
+    setCustomDateRange(dateRange);
+    setRange(RANGES.CUSTOM);
+  };
+
+  const handleClearCustomDate = () => {
+    setCustomDateRange(null);
+    setRange(RANGES.DAILY);
+  };
+
+  const handleRangeChange = (newRange) => {
+    if (newRange !== RANGES.CUSTOM) {
+      setCustomDateRange(null);
+    }
+    setRange(newRange);
+  };
+
+  // Product handlers
   const handleAddProduct = async () => handleServiceResult(await addProduct());
   const handleToggleFavorite = async (id, val) => { const r = await toggleFavorite(id, val); if (!r.success) handleServiceResult(r); };
   const handleDeleteProduct = async (id) => handleServiceResult(await deleteProduct(id));
   const handleSaveEditProduct = async () => handleServiceResult(await saveEditProduct());
 
-  // Order
+  // Order handlers
   const handleAddOrder = async () => handleServiceResult(await addOrder());
   const handleDeleteOrder = async (id) => handleServiceResult(await deleteOrder(id));
   const handleSaveEditOrder = async () => handleServiceResult(await saveEditOrder());
+  const handleToggleOrderStatus = async (id) => handleServiceResult(await toggleOrderStatus(id)); // Yeni handler
 
   // Loading & auth
   if (authLoading) return <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"100vh",fontSize:"1.2rem",color:"#6b7280"}}>Yükleniyor...</div>;
   if (!user) return <AuthPage />;
 
   // Page info
-  const rangeLabel = range === RANGES.DAILY ? "Günlük" : range === RANGES.MONTHLY ? "Aylık" : "Yıllık";
+  const getRangeLabel = () => {
+    if (customDateRange) {
+      const startDate = new Date(customDateRange.startDate).toLocaleDateString('tr-TR');
+      const endDate = new Date(customDateRange.endDate).toLocaleDateString('tr-TR');
+      return `${startDate} - ${endDate}`;
+    }
+    return range === RANGES.DAILY ? "Günlük" : range === RANGES.MONTHLY ? "Aylık" : "Yıllık";
+  };
+
+  const rangeLabel = getRangeLabel();
   const pageInfo = activeTab === TABS.DASHBOARD
-    ? { title: "Anasayfa", subtitle: `İşletmenizin ${rangeLabel.toLowerCase()} performansını görüntüleyin` }
+    ? { title: "Anasayfa", subtitle: `İşletmenizin ${customDateRange ? 'seçili tarih aralığındaki' : rangeLabel.toLowerCase()} performansını görüntüleyin` }
     : activeTab === TABS.PRODUCTS
     ? { title: "Ürün Yönetimi", subtitle: "Ürünlerinizi ekleyin, düzenleyin ve yönetin" }
     : { title: "Sipariş İşlemleri", subtitle: activeSubTab === ORDER_SUB_TABS.NEW_ORDER ? "Yeni sipariş oluşturun" : "Sipariş geçmişinizi görüntüleyin" };
 
-  const currentStats = stats[range];
-  const currentChartData = chartData[range];
+  const currentStats = stats[customDateRange ? RANGES.CUSTOM : range];
+  const currentChartData = chartData[customDateRange ? RANGES.CUSTOM : range];
 
   return (
     <div className="app-container">
@@ -109,12 +143,28 @@ export default function App() {
       <ThemeSwitcher isDarkMode={isDarkMode} onToggle={toggleTheme} />
 
       <div className="main-content">
-        <Header pageTitle={pageInfo.title} pageSubtitle={pageInfo.subtitle} range={range} onRangeChange={setRange} showRangeSwitcher />
+        <Header 
+          pageTitle={pageInfo.title} 
+          pageSubtitle={pageInfo.subtitle} 
+          range={range} 
+          onRangeChange={handleRangeChange}
+          customDateRange={customDateRange}
+          onCustomDateChange={handleCustomDateChange}
+          onClearCustomDate={handleClearCustomDate}
+          showRangeSwitcher 
+        />
 
         <Notification notification={notification} />
 
         {activeTab === TABS.DASHBOARD && (
-          <Dashboard range={range} setRange={setRange} currentStats={currentStats} currentChartData={currentChartData} chartTheme={chartTheme} />
+          <Dashboard 
+            range={customDateRange ? RANGES.CUSTOM : range} 
+            setRange={setRange} 
+            currentStats={currentStats} 
+            currentChartData={currentChartData} 
+            chartTheme={chartTheme}
+            customDateRange={customDateRange}
+          />
         )}
 
         {activeTab === TABS.PRODUCTS && (
@@ -140,11 +190,14 @@ export default function App() {
             orders={orders} ordersLoading={ordersLoading}
             editingOrder={editingOrder} editOrderForm={editOrderForm} setEditOrderForm={setEditOrderForm}
             editOrderDate={editOrderDate} setEditOrderDate={setEditOrderDate}
+            editOrderStatus={editOrderStatus} setEditOrderStatus={setEditOrderStatus} // Yeni prop
+            newOrderStatus={newOrderStatus} setNewOrderStatus={setNewOrderStatus} // Yeni prop
             onAddOrder={handleAddOrder}
             onDeleteOrder={handleDeleteOrder}
             onStartEditOrder={startEditOrder}
             onSaveEditOrder={handleSaveEditOrder}
             onCancelEditOrder={cancelEditOrder}
+            onToggleOrderStatus={handleToggleOrderStatus} // Yeni prop
           />
         )}
       </div>

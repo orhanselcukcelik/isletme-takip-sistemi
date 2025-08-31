@@ -14,6 +14,24 @@ export const ORDER_SUB_TABS = {
   ORDER_HISTORY: 'order-history'
 };
 
+// Sipariş durumu sabitleri
+export const ORDER_STATUS = {
+  PAID: 'paid',
+  UNPAID: 'unpaid'
+};
+
+// Sipariş durumu etiketleri
+export const ORDER_STATUS_LABELS = {
+  [ORDER_STATUS.PAID]: 'Ödendi',
+  [ORDER_STATUS.UNPAID]: 'Ödenmedi'
+};
+
+// Sipariş durumu renkleri (CSS sınıfları için)
+export const ORDER_STATUS_COLORS = {
+  [ORDER_STATUS.PAID]: 'success',
+  [ORDER_STATUS.UNPAID]: 'warning'
+};
+
 // Sıralama türleri
 export const SORT_TYPES = {
   DEFAULT: 'default',
@@ -25,14 +43,16 @@ export const SORT_TYPES = {
 export const RANGES = {
   DAILY: 'daily',
   MONTHLY: 'monthly',
-  YEARLY: 'yearly'
+  YEARLY: 'yearly',
+  CUSTOM: 'custom' // Özel tarih aralığı eklendi
 };
 
 // Range etiketleri
 export const RANGE_LABELS = {
   [RANGES.DAILY]: 'Günlük',
   [RANGES.MONTHLY]: 'Aylık',
-  [RANGES.YEARLY]: 'Yıllık'
+  [RANGES.YEARLY]: 'Yıllık',
+  [RANGES.CUSTOM]: 'Özel Tarih' // Özel tarih etiketi eklendi
 };
 
 // Stok uyarı eşiği
@@ -47,5 +67,6 @@ export const DEFAULT_VALUES = {
     taxRate: '',
     stock: ''
   },
-  SELECTED_PRODUCTS: {}
+  SELECTED_PRODUCTS: {},
+  ORDER_STATUS: ORDER_STATUS.UNPAID // Varsayılan sipariş durumu
 };

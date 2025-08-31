@@ -3,7 +3,9 @@ import OrderCard from "./OrderCard";
 
 export default function OrderHistory({
   orders, editingOrder, editOrderForm, setEditOrderForm, editOrderDate, setEditOrderDate,
-  onStartEditOrder, onSaveEditOrder, onCancelEditOrder, onDeleteOrder
+  editOrderStatus, setEditOrderStatus, // Yeni prop'lar
+  onStartEditOrder, onSaveEditOrder, onCancelEditOrder, onDeleteOrder,
+  onToggleOrderStatus // Yeni prop
 }) {
   if (orders.length === 0) return <div className="content-card"><div className="content-body"><p className="no-orders">Henüz sipariş kaydı bulunmuyor.</p></div></div>;
 
@@ -20,10 +22,13 @@ export default function OrderHistory({
               setEditOrderDate={setEditOrderDate}
               editOrderForm={editOrderForm}
               setEditOrderForm={setEditOrderForm}
+              editOrderStatus={editOrderStatus} // Yeni prop
+              setEditOrderStatus={setEditOrderStatus} // Yeni prop
               onStartEdit={onStartEditOrder}
               onSaveEdit={onSaveEditOrder}
               onCancelEdit={onCancelEditOrder}
               onDelete={onDeleteOrder}
+              onToggleStatus={onToggleOrderStatus} // Yeni prop
             />
           ))}
         </div>

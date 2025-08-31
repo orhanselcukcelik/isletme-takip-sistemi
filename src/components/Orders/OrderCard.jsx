@@ -1,19 +1,68 @@
 import React from "react";
 import { Edit2, Trash2, Check, X } from "lucide-react";
 import { formatCurrency } from "../../utils/calculations";
+import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "../../utils/constants";
 
 export default function OrderCard({
   order, isEditing, editOrderDate, setEditOrderDate,
   editOrderForm, setEditOrderForm,
-  onStartEdit, onSaveEdit, onCancelEdit, onDelete
+  editOrderStatus, setEditOrderStatus, // Yeni prop'lar
+  onStartEdit, onSaveEdit, onCancelEdit, onDelete,
+  onToggleStatus // Yeni prop
 }) {
+  const handleStatusToggle = (e) => {
+    e.stopPropagation(); // Kart tıklamasını engelle
+    onToggleStatus(order.id);
+  };
+
+  // Sipariş durumunu al (eski siparişler için varsayılan)
+  const currentStatus = order.status || ORDER_STATUS.UNPAID;
+
   return (
     <div className="order-card">
       <div className="order-header">
         <div className="order-info">
-          <h3>Sipariş #{order.id}</h3>
+          <div className="order-title-row">
+            <h3>Sipariş #{order.id}</h3>
+            
+            {/* Sipariş Durumu Badge'i */}
+            {!isEditing && (
+              <button
+                onClick={handleStatusToggle}
+                className={`status-badge status-${ORDER_STATUS_COLORS[currentStatus]}`}
+                title="Durumu değiştirmek için tıklayın"
+              >
+                {ORDER_STATUS_LABELS[currentStatus]}
+              </button>
+            )}
+          </div>
+
           {isEditing ? (
-            <input type="datetime-local" value={editOrderDate} onChange={e => setEditOrderDate(e.target.value)} className="order-date-input" />
+            <div className="edit-controls">
+              <input 
+                type="datetime-local" 
+                value={editOrderDate} 
+                onChange={e => setEditOrderDate(e.target.value)} 
+                className="order-date-input" 
+              />
+              
+              {/* Düzenleme modunda durum seçici */}
+              <div className="edit-status-selector">
+                <label>Durum:</label>
+                <select
+                  value={editOrderStatus}
+                  onChange={(e) => setEditOrderStatus(e.target.value)}
+                  className="status-select"
+                >
+                  <option value={ORDER_STATUS.UNPAID}>
+                    {ORDER_STATUS_LABELS[ORDER_STATUS.UNPAID]}
+                  </option>
+                  <option value={ORDER_STATUS.PAID}>
+                    {ORDER_STATUS_LABELS[ORDER_STATUS.PAID]}
+                  </option>
+                </select>
+              </div>
+            </div>
           ) : (
             <p className="order-date">{new Date(order.date).toLocaleString("tr-TR")}</p>
           )}

@@ -1,8 +1,6 @@
 // src/services/orderService.js
-// Bu dosya SADECE sipariş işlemleriyle ilgilenecek
-
-// Firebase increment import (en üste eklenecek)
 import { increment } from 'firebase/firestore';
+import { ORDER_STATUS } from '../utils/constants';
 
 import { 
   collection, 
@@ -17,10 +15,35 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
-// Sipariş işlemleri için tüm fonksiyonlar burada
+const normalizeDateToISO = (raw) => {
+  try {
+    if (!raw) return new Date().toISOString();
+    // Firestore Timestamp (has toDate)
+    if (typeof raw.toDate === 'function') {
+      const d = raw.toDate();
+      return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    }
+    // number timestamp (ms)
+    if (typeof raw === 'number') {
+      const d = new Date(raw);
+      return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    }
+    // string
+    if (typeof raw === 'string') {
+      const d = new Date(raw);
+      return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    }
+    // Date object
+    if (raw instanceof Date) {
+      return isNaN(raw.getTime()) ? new Date().toISOString() : raw.toISOString();
+    }
+    return new Date().toISOString();
+  } catch {
+    return new Date().toISOString();
+  }
+};
+
 export const orderService = {
-  
-  // 1️⃣ Siparişleri dinleme (App.js'teki useEffect'ten gelecek)
   subscribeToOrders: (userId, callback) => {
     console.log('Siparişler dinlenmeye başlandı:', userId);
     
@@ -28,36 +51,34 @@ export const orderService = {
     const q = query(ordersRef, orderBy("createdAt", "desc"));
     
     return onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        // Firestore timestamp'i Date'e çevir
-        date: doc.data().date?.toDate() || new Date()
-      }));
+      const orders = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const normalizedDate = normalizeDateToISO(data.date);
+        return {
+          id: docSnap.id,
+          ...data,
+          date: normalizedDate, // ISO string kesin
+          status: data.status || ORDER_STATUS.UNPAID
+        };
+      });
       
-      console.log('Siparişler güncellendi:', orders.length, 'adet');
+      console.log('Siparişler güncellendi (subscribeToOrders):', orders.length);
       callback(orders);
     }, (error) => {
       console.error('Sipariş dinleme hatası:', error);
     });
   },
 
-  // 2️⃣ Yeni sipariş ekleme (App.js'teki addOrder'dan gelecek)
-  addOrder: async (userId, selectedProducts, products) => {
+  addOrder: async (userId, selectedProducts, products, orderStatus = ORDER_STATUS.UNPAID) => {
     console.log('Yeni sipariş oluşturuluyor:', selectedProducts);
     
     try {
-      // Sipariş öğelerini hazırla
       const orderItems = Object.entries(selectedProducts)
         .filter(([_, quantity]) => quantity > 0)
         .map(([productId, quantity]) => {
           const product = products.find(p => p.id === productId);
-          if (!product) {
-            throw new Error(`Ürün bulunamadı: ${productId}`);
-          }
-          if (product.stock < quantity) {
-            throw new Error(`${product.name} için yeterli stok yok! (Mevcut: ${product.stock})`);
-          }
+          if (!product) throw new Error(`Ürün bulunamadı: ${productId}`);
+          if (product.stock < quantity) throw new Error(`${product.name} için yeterli stok yok! (Mevcut: ${product.stock})`);
           
           const totalRevenue = product.sellPrice * quantity;
           const totalTax = totalRevenue * (product.taxRate / 100);
@@ -75,31 +96,27 @@ export const orderService = {
           };
         });
 
-      if (orderItems.length === 0) {
-        throw new Error('Sipariş oluşturmak için ürün seçin.');
-      }
+      if (orderItems.length === 0) throw new Error('Sipariş oluşturmak için ürün seçin.');
 
-      // Toplam değerleri hesapla
       const totalRevenue = orderItems.reduce((sum, item) => sum + item.totalRevenue, 0);
       const totalCost = orderItems.reduce((sum, item) => sum + item.totalCost, 0);
       const totalTax = orderItems.reduce((sum, item) => sum + item.totalTax, 0);
       const profit = totalRevenue - totalCost;
 
       const order = {
-        date: new Date(),
+        date: new Date().toISOString(), // ISO string burada da
         items: orderItems,
         totalRevenue,
         totalCost,
         totalTax,
         profit,
+        status: orderStatus,
         createdAt: serverTimestamp()
       };
 
-      // Siparişi Firebase'e kaydet
       const ordersRef = collection(db, "users", userId, "orders");
       const docRef = await addDoc(ordersRef, order);
 
-      // Stokları güncelle
       await orderService.updateStocks(userId, orderItems, 'decrease');
 
       console.log('Sipariş başarıyla eklendi:', docRef.id);
@@ -111,12 +128,10 @@ export const orderService = {
     }
   },
 
-  // 3️⃣ Sipariş güncelleme (App.js'teki saveEditOrder'dan gelecek)
-  updateOrder: async (userId, orderId, originalOrder, updatedItems, updatedDate) => {
+  updateOrder: async (userId, orderId, originalOrder, updatedItems, updatedDate, updatedStatus) => {
     console.log('Sipariş güncelleniyor:', orderId);
     
     try {
-      // Güncellenen öğeleri hesapla
       const processedItems = updatedItems.map(item => {
         const totalRevenue = item.sellPrice * item.quantity;
         const totalTax = totalRevenue * (item.taxRate / 100);
@@ -133,18 +148,17 @@ export const orderService = {
       const totalTax = processedItems.reduce((sum, item) => sum + item.totalTax, 0);
       const profit = totalRevenue - totalCost;
 
-      // Siparişi güncelle
       const orderRef = doc(db, "users", userId, "orders", orderId);
       await updateDoc(orderRef, {
-        date: new Date(updatedDate),
+        date: new Date(updatedDate).toISOString(),
         items: processedItems,
         totalRevenue,
         totalCost,
         totalTax,
-        profit
+        profit,
+        status: updatedStatus
       });
 
-      // Stok farklarını hesapla ve güncelle
       await orderService.updateStockDifferences(userId, originalOrder.items, processedItems);
 
       console.log('Sipariş başarıyla güncellendi');
@@ -156,16 +170,13 @@ export const orderService = {
     }
   },
 
-  // 4️⃣ Sipariş silme (App.js'teki deleteOrder'dan gelecek)
   deleteOrder: async (userId, orderId, orderItems) => {
     console.log('Sipariş siliniyor:', orderId);
     
     try {
-      // Siparişi sil
       const orderRef = doc(db, "users", userId, "orders", orderId);
       await deleteDoc(orderRef);
 
-      // Stokları geri yükle
       await orderService.updateStocks(userId, orderItems, 'increase');
 
       console.log('Sipariş başarıyla silindi');
@@ -177,55 +188,50 @@ export const orderService = {
     }
   },
 
-  // 🔧 YARDIMCI FONKSİYONLAR
+  updateOrderStatus: async (userId, orderId, newStatus) => {
+    console.log('Sipariş durumu güncelleniyor:', orderId, 'yeni durum:', newStatus);
+    
+    try {
+      const orderRef = doc(db, "users", userId, "orders", orderId);
+      await updateDoc(orderRef, { status: newStatus });
+      console.log('Sipariş durumu başarıyla güncellendi');
+      return { success: true };
+    } catch (error) {
+      console.error('Sipariş durumu güncelleme hatası:', error);
+      return { success: false, error: error.message };
+    }
+  },
 
-  // Stokları güncelleme (artırma/azaltma)
   updateStocks: async (userId, orderItems, operation) => {
     console.log('Stoklar güncelleniyor:', operation);
-    
     const promises = orderItems.map(async (item) => {
       const productRef = doc(db, "users", userId, "products", item.productId);
-      
-      // Mevcut ürünü bul (App.js'ten products array'i alacağız)
-      // Bu kısmı App.js'te products state'i ile çözeceğiz
       const stockChange = operation === 'increase' ? item.quantity : -item.quantity;
-      
-      return updateDoc(productRef, {
-        stock: increment(stockChange) // Firebase increment kullanabiliriz
-      });
+      return updateDoc(productRef, { stock: increment(stockChange) });
     });
-
     await Promise.all(promises);
     console.log('Tüm stoklar güncellendi');
   },
 
-  // Stok farklarını güncelleme (sipariş düzenleme için)
   updateStockDifferences: async (userId, originalItems, updatedItems) => {
     console.log('Stok farkları hesaplanıyor');
-    
-    // Her ürün için stok farkını hesapla
     const stockChanges = {};
-    
-    // Orijinal siparişten stokları geri ekle
+
     originalItems.forEach(item => {
       if (!stockChanges[item.productId]) stockChanges[item.productId] = 0;
       stockChanges[item.productId] += item.quantity;
     });
-    
-    // Yeni siparişten stokları düş
+
     updatedItems.forEach(item => {
       if (!stockChanges[item.productId]) stockChanges[item.productId] = 0;
       stockChanges[item.productId] -= item.quantity;
     });
 
-    // Sadece değişen ürünleri güncelle
     const promises = Object.entries(stockChanges)
       .filter(([_, change]) => change !== 0)
-      .map(async ([productId, change]) => {
+      .map(([productId, change]) => {
         const productRef = doc(db, "users", userId, "products", productId);
-        return updateDoc(productRef, {
-          stock: increment(change)
-        });
+        return updateDoc(productRef, { stock: increment(change) });
       });
 
     await Promise.all(promises);

@@ -1,264 +1,444 @@
 // src/hooks/useOrders.js
-// Bu hook tüm sipariş işlemlerini yönetir
-
 import { useState, useEffect, useMemo } from 'react';
 import { orderService } from '../services/orderService';
+import { ORDER_STATUS, RANGES } from '../utils/constants';
 
-export const useOrders = (user, products = []) => {
-  // Orders state
+// safe number
+const safeNumber = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// calculateStats - özel tarih aralığı desteği eklendi
+const calculateStats = (orders, range, customDateRange = null) => {
+  const now = new Date();
+  
+  const matchers = {
+    daily: (d) => d.toDateString() === now.toDateString(),
+    monthly: (d) => d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(),
+    yearly: (d) => d.getFullYear() === now.getFullYear(),
+    custom: (d) => {
+      if (!customDateRange) return false;
+      const startDate = new Date(customDateRange.startDate);
+      const endDate = new Date(customDateRange.endDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      return d >= startDate && d <= endDate;
+    }
+  };
+
+  const selectedOrders = orders.filter(order => {
+    try {
+      const d = new Date(order.date);
+      if (isNaN(d.getTime())) return false;
+      return matchers[range](d);
+    } catch {
+      return false;
+    }
+  });
+
+  const paidOrders = selectedOrders.filter(order => order.status === ORDER_STATUS.PAID);
+  const unpaidOrders = selectedOrders.filter(order => order.status === ORDER_STATUS.UNPAID);
+
+  return {
+    totalRevenue: paidOrders.reduce((sum, order) => sum + safeNumber(order.totalRevenue), 0),
+    totalCost: paidOrders.reduce((sum, order) => sum + safeNumber(order.totalCost), 0),
+    totalProfit: paidOrders.reduce((sum, order) => sum + safeNumber(order.profit), 0),
+    totalTax: paidOrders.reduce((sum, order) => sum + safeNumber(order.totalTax), 0),
+    orderCount: selectedOrders.length,
+    paidOrderCount: paidOrders.length,
+    unpaidOrderCount: unpaidOrders.length,
+    paidRevenue: paidOrders.reduce((sum, order) => sum + safeNumber(order.totalRevenue), 0),
+    unpaidRevenue: unpaidOrders.reduce((sum, order) => sum + safeNumber(order.totalRevenue), 0),
+    paidProfit: paidOrders.reduce((sum, order) => sum + safeNumber(order.profit), 0),
+    unpaidProfit: unpaidOrders.reduce((sum, order) => sum + safeNumber(order.profit), 0),
+    totalRevenueAll: selectedOrders.reduce((sum, order) => sum + safeNumber(order.totalRevenue), 0),
+    totalCostAll: selectedOrders.reduce((sum, order) => sum + safeNumber(order.totalCost), 0),
+    totalProfitAll: selectedOrders.reduce((sum, order) => sum + safeNumber(order.profit), 0),
+    totalTaxAll: selectedOrders.reduce((sum, order) => sum + safeNumber(order.totalTax), 0)
+  };
+};
+
+// getGroupingKey - özel tarih aralığı desteği eklendi
+const getGroupingKey = (dateIso, range, customDateRange = null) => {
+  const d = new Date(dateIso);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+
+  if (range === 'custom' && customDateRange) {
+    const startDate = new Date(customDateRange.startDate);
+    const endDate = new Date(customDateRange.endDate);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    if (d < startDate || d > endDate) return null;
+    
+    // Özel tarih aralığında günlere göre gruplama
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+  }
+
+  if (range === 'daily') {
+    if (d.toDateString() === now.toDateString()) {
+      return `${String(d.getHours()).padStart(2, '0')}:00`;
+    }
+    return null;
+  }
+
+  if (range === 'monthly') {
+    if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+      return String(d.getDate()).padStart(2, '0'); // '01', '02', ...
+    }
+    return null;
+  }
+
+  if (d.getFullYear() === now.getFullYear()) {
+    return String(d.getMonth() + 1).padStart(2, '0'); // '01'..'12'
+  }
+  return null;
+};
+
+const calculateChartData = (orders, range, customDateRange = null) => {
+  const grouped = {};
+
+  orders.forEach(order => {
+    if (!order || !order.date) return;
+    const key = getGroupingKey(order.date, range, customDateRange);
+    if (!key) return;
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        date: key,
+        revenue: 0,
+        profit: 0,
+        orders: 0,
+        paidRevenue: 0,
+        unpaidRevenue: 0,
+        paidOrders: 0,
+        unpaidOrders: 0
+      };
+    }
+
+    grouped[key].orders += 1;
+
+    if (order.status === ORDER_STATUS.PAID) {
+      grouped[key].revenue += safeNumber(order.totalRevenue);
+      grouped[key].profit += safeNumber(order.profit);
+      grouped[key].paidRevenue += safeNumber(order.totalRevenue);
+      grouped[key].paidOrders += 1;
+    } else {
+      grouped[key].unpaidRevenue += safeNumber(order.totalRevenue);
+      grouped[key].unpaidOrders += 1;
+    }
+  });
+
+  if (range === 'custom' && customDateRange) {
+    // Özel tarih aralığı için günlere göre chart data
+    const startDate = new Date(customDateRange.startDate);
+    const endDate = new Date(customDateRange.endDate);
+    const dates = [];
+    
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+      dates.push(dateKey);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return dates.map(date => ({
+      date: date,
+      revenue: grouped[date]?.revenue || 0,
+      profit: grouped[date]?.profit || 0,
+      orders: grouped[date]?.orders || 0,
+      paidRevenue: grouped[date]?.paidRevenue || 0,
+      unpaidRevenue: grouped[date]?.unpaidRevenue || 0,
+      paidOrders: grouped[date]?.paidOrders || 0,
+      unpaidOrders: grouped[date]?.unpaidOrders || 0
+    }));
+  }
+
+  if (range === 'daily') {
+    const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+    return hours.map(hour => ({
+      date: hour,
+      revenue: grouped[hour]?.revenue || 0,
+      profit: grouped[hour]?.profit || 0,
+      orders: grouped[hour]?.orders || 0,
+      paidRevenue: grouped[hour]?.paidRevenue || 0,
+      unpaidRevenue: grouped[hour]?.unpaidRevenue || 0,
+      paidOrders: grouped[hour]?.paidOrders || 0,
+      unpaidOrders: grouped[hour]?.unpaidOrders || 0
+    }));
+  }
+
+  if (range === 'monthly') {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const days = Array.from({ length: daysInMonth }, (_, i) => String(i + 1).padStart(2, '0'));
+    return days.map(day => ({
+      date: day,
+      revenue: grouped[day]?.revenue || 0,
+      profit: grouped[day]?.profit || 0,
+      orders: grouped[day]?.orders || 0,
+      paidRevenue: grouped[day]?.paidRevenue || 0,
+      unpaidRevenue: grouped[day]?.unpaidRevenue || 0,
+      paidOrders: grouped[day]?.paidOrders || 0,
+      unpaidOrders: grouped[day]?.unpaidOrders || 0
+    }));
+  }
+
+  const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+  return months.map(month => ({
+    date: month,
+    revenue: grouped[month]?.revenue || 0,
+    profit: grouped[month]?.profit || 0,
+    orders: grouped[month]?.orders || 0,
+    paidRevenue: grouped[month]?.paidRevenue || 0,
+    unpaidRevenue: grouped[month]?.unpaidRevenue || 0,
+    paidOrders: grouped[month]?.paidOrders || 0,
+    unpaidOrders: grouped[month]?.unpaidOrders || 0
+  }));
+};
+
+export const useOrders = (user, products = [], customDateRange = null, notificationHook = null) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  
-  // Selected products for new order
+  const [hasInitializedTimers, setHasInitializedTimers] = useState(false);
+
   const [selectedProducts, setSelectedProducts] = useState({});
-  
-  // Order editing state
   const [editingOrder, setEditingOrder] = useState(null);
   const [editOrderForm, setEditOrderForm] = useState([]);
   const [editOrderDate, setEditOrderDate] = useState('');
+  const [editOrderStatus, setEditOrderStatus] = useState(ORDER_STATUS.UNPAID);
+  const [newOrderStatus, setNewOrderStatus] = useState(ORDER_STATUS.UNPAID);
 
-  // Firebase - Siparişleri dinleme
+  // sanitize order: ensure numbers and date ISO string
+  const sanitizeOrder = (o) => {
+    const dateIso = (() => {
+      try {
+        if (!o?.date) return new Date().toISOString();
+        if (typeof o.date === 'string') {
+          const d = new Date(o.date);
+          return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+        }
+        if (typeof o.date === 'number') {
+          const d = new Date(o.date);
+          return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+        }
+        if (o.date instanceof Date) {
+          return isNaN(o.date.getTime()) ? new Date().toISOString() : o.date.toISOString();
+        }
+        if (typeof o.date.toDate === 'function') {
+          const d = o.date.toDate();
+          return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+        }
+        return new Date().toISOString();
+      } catch {
+        return new Date().toISOString();
+      }
+    })();
+
+    return {
+      ...o,
+      date: dateIso,
+      totalRevenue: safeNumber(o.totalRevenue),
+      totalCost: safeNumber(o.totalCost),
+      profit: safeNumber(o.profit),
+      totalTax: safeNumber(o.totalTax),
+      items: Array.isArray(o.items) ? o.items.map(it => ({
+        ...it,
+        quantity: safeNumber(it.quantity),
+        sellPrice: safeNumber(it.sellPrice),
+        totalRevenue: safeNumber(it.totalRevenue)
+      })) : []
+    };
+  };
+
   useEffect(() => {
     if (!user) {
-      console.log('Kullanıcı yok, siparişler temizleniyor');
       setOrders([]);
       return;
     }
 
-    console.log('Siparişler dinlenmeye başlanıyor:', user.uid);
-    
-    const unsubscribe = orderService.subscribeToOrders(user.uid, (orders) => {
-      console.log('Siparişler güncellendi:', orders.length, 'adet');
-      setOrders(orders);
+    let prevOrders = [];
+
+    const unsubscribe = orderService.subscribeToOrders(user.uid, (newOrdersRaw) => {
+      const newOrders = (Array.isArray(newOrdersRaw) ? newOrdersRaw : []).map(o => sanitizeOrder(o));
+      // notification logic (kopya gönder)
+      if (notificationHook && prevOrders.length > 0) {
+        const prevIds = new Set(prevOrders.map(o => o.id));
+        const added = newOrders.filter(o => !prevIds.has(o.id));
+        added.forEach(order => {
+          if (order.status === ORDER_STATUS.UNPAID) {
+            try { notificationHook.handleNewOrder(order.id, order.status, order.date); } catch (e) { console.error(e); }
+          }
+        });
+
+        const prevMap = new Map(prevOrders.map(o => [o.id, o]));
+        newOrders.forEach(order => {
+          const prev = prevMap.get(order.id);
+          if (prev && prev.status !== order.status) {
+            try { notificationHook.handleOrderStatusChange(order.id, order.status, order.date); } catch (e) { console.error(e); }
+          }
+        });
+
+        const newIds = new Set(newOrders.map(o => o.id));
+        prevOrders.forEach(order => {
+          if (!newIds.has(order.id)) {
+            try { notificationHook.handleOrderDelete(order.id); } catch (e) { console.error(e); }
+          }
+        });
+      }
+
+      prevOrders = newOrders.map(o => ({ ...o }));
+      setOrders(newOrders);
     });
 
     return () => {
-      console.log('Sipariş listener kapatılıyor...');
-      unsubscribe();
+      try { unsubscribe(); } catch (e) {}
     };
-  }, [user]);
+  }, [user?.uid, notificationHook]);
 
-  // Statistics hesaplama helpers
-  const getStats = (range) => {
-    const now = new Date();
-    const matchers = {
-      daily: (d) => d.toDateString() === now.toDateString(),
-      monthly: (d) => d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(),
-      yearly: (d) => d.getFullYear() === now.getFullYear()
-    };
-    
-    const selectedOrders = orders.filter(order => matchers[range](new Date(order.date)));
-    
-    return {
-      totalRevenue: selectedOrders.reduce((sum, order) => sum + (order.totalRevenue || 0), 0),
-      totalCost: selectedOrders.reduce((sum, order) => sum + (order.totalCost || 0), 0),
-      totalProfit: selectedOrders.reduce((sum, order) => sum + (order.profit || 0), 0),
-      totalTax: selectedOrders.reduce((sum, order) => sum + (order.totalTax || 0), 0),
-      orderCount: selectedOrders.length
-    };
-  };
+  useEffect(() => {
+    if (!notificationHook || orders.length === 0 || hasInitializedTimers) return;
 
-  const getGroupingKey = (date, range) => {
-    const d = new Date(date);
-    const now = new Date();
-    
-    if (range === 'daily') {
-      if (d.toDateString() === now.toDateString()) {
-        return `${String(d.getHours()).padStart(2,'0')}:00`;
-      }
-      return null;
-    }
-    
-    if (range === 'monthly') {
-      if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
-        return String(d.getDate());
-      }
-      return null;
-    }
-    
-    if (d.getFullYear() === now.getFullYear()) {
-      return String(d.getMonth() + 1);
-    }
-    return null;
-  };
-
-  const getChartData = (range) => {
-    const grouped = {};
-    
     orders.forEach(order => {
-      const key = getGroupingKey(order.date, range);
-      if (!key) return;
-      
-      if (!grouped[key]) {
-        grouped[key] = { date: key, revenue: 0, profit: 0, orders: 0 };
+      if (order.status === ORDER_STATUS.UNPAID) {
+        const orderTime = new Date(order.date).getTime();
+        const now = Date.now();
+        const elapsedTime = now - orderTime;
+        const thirtyMinutes = 30 * 60 * 1000;
+        if (elapsedTime < thirtyMinutes) {
+          const remaining = thirtyMinutes - elapsedTime;
+          setTimeout(() => {
+            try { notificationHook.handleNewOrder(order.id, order.status, order.date); } catch (e) { console.error(e); }
+          }, remaining);
+        }
       }
-      grouped[key].revenue += (order.totalRevenue || 0);
-      grouped[key].profit += (order.profit || 0);
-      grouped[key].orders += 1;
     });
 
-    const parseKey = (k) => {
-      if (range === 'daily') return parseInt(k.split(':')[0]);
-      return parseInt(k);
+    setHasInitializedTimers(true);
+  }, [orders, notificationHook, hasInitializedTimers]);
+
+  // Stats hesaplama - özel tarih aralığı desteği eklendi
+  const stats = useMemo(() => {
+    const baseStats = {
+      daily: calculateStats(orders, 'daily'),
+      monthly: calculateStats(orders, 'monthly'),
+      yearly: calculateStats(orders, 'yearly')
     };
-
-    // Eksik aralıkları doldur
-    if (range === 'daily') {
-      const hours = Array.from({length: 24}, (_, i) => `${String(i).padStart(2,'0')}:00`);
-      return hours.map(hour => grouped[hour] || { date: hour, revenue: 0, profit: 0, orders: 0 });
+    
+    // Özel tarih aralığı varsa, custom stats'i de ekle
+    if (customDateRange) {
+      baseStats[RANGES.CUSTOM] = calculateStats(orders, 'custom', customDateRange);
     }
     
-    if (range === 'monthly') {
-      const now = new Date();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const days = Array.from({length: daysInMonth}, (_, i) => String(i + 1));
-      return days.map(day => grouped[day] || { date: day, revenue: 0, profit: 0, orders: 0 });
+    return baseStats;
+  }, [orders, customDateRange]);
+
+  // Chart data hesaplama - özel tarih aralığı desteği eklendi
+  const chartData = useMemo(() => {
+    const baseChartData = {
+      daily: calculateChartData(orders, 'daily'),
+      monthly: calculateChartData(orders, 'monthly'),
+      yearly: calculateChartData(orders, 'yearly')
+    };
+    
+    // Özel tarih aralığı varsa, custom chart data'sını da ekle
+    if (customDateRange) {
+      baseChartData[RANGES.CUSTOM] = calculateChartData(orders, 'custom', customDateRange);
     }
     
-    const months = Array.from({length: 12}, (_, i) => String(i + 1));
-    return months.map(month => grouped[month] || { date: month, revenue: 0, profit: 0, orders: 0 });
-  };
+    return baseChartData;
+  }, [orders, customDateRange]);
 
-  // Memoized calculations
-  const stats = useMemo(() => ({
-    daily: getStats('daily'),
-    monthly: getStats('monthly'),
-    yearly: getStats('yearly')
-  }), [orders]);
-
-  const chartData = useMemo(() => ({
-    daily: getChartData('daily'),
-    monthly: getChartData('monthly'),
-    yearly: getChartData('yearly')
-  }), [orders]);
-
-  // Yeni sipariş ekleme
+  // add/delete/update/toggle etc. (kısaltılmış, eskisi gibi bırakabilirsiniz)
   const addOrder = async () => {
-    console.log('Yeni sipariş ekleniyor:', selectedProducts);
-    
-    if (!user) {
-      return { success: false, error: 'Önce giriş yapmalısınız.' };
-    }
-
-    // Seçilen ürün kontrolü
-    const selectedCount = Object.values(selectedProducts).filter(qty => qty > 0).length;
-    if (selectedCount === 0) {
-      return { success: false, error: 'Sipariş oluşturmak için ürün seçin.' };
-    }
-
+    if (!user) return { success: false, error: 'Önce giriş yapmalısınız.' };
+    const selectedCount = Object.values(selectedProducts).filter(q => q > 0).length;
+    if (selectedCount === 0) return { success: false, error: 'Sipariş oluşturmak için ürün seçin.' };
     setLoading(true);
-    
     try {
-      const result = await orderService.addOrder(user.uid, selectedProducts, products);
-      
+      const result = await orderService.addOrder(user.uid, selectedProducts, products, newOrderStatus);
       if (result.success) {
         setSelectedProducts({});
-        console.log('Sipariş başarıyla eklendi');
+        setNewOrderStatus(ORDER_STATUS.UNPAID);
         return { success: true, message: 'Sipariş eklendi!' };
-      } else {
-        return result;
       }
+      return result;
     } catch (error) {
-      console.error('Sipariş ekleme hatası:', error);
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
   };
 
-  // Sipariş silme
   const deleteOrder = async (orderId) => {
     if (!user) return { success: false, error: 'Kullanıcı bulunamadı' };
-    
     const orderToDelete = orders.find(order => order.id === orderId);
     if (!orderToDelete) return { success: false, error: 'Sipariş bulunamadı' };
-
-    console.log('Sipariş siliniyor:', orderId);
-    
     const result = await orderService.deleteOrder(user.uid, orderId, orderToDelete.items);
-    
-    if (result.success) {
-      return { success: true, message: 'Sipariş silindi!' };
-    } else {
-      return result;
-    }
+    return result.success ? { success: true, message: 'Sipariş silindi!' } : result;
   };
 
-  // Sipariş düzenleme başlatma
+  const toggleOrderStatus = async (orderId) => {
+    if (!user) return { success: false, error: 'Kullanıcı bulunamadı' };
+    const order = orders.find(order => order.id === orderId);
+    if (!order) return { success: false, error: 'Sipariş bulunamadı' };
+    const newStatus = order.status === ORDER_STATUS.PAID ? ORDER_STATUS.UNPAID : ORDER_STATUS.PAID;
+    const result = await orderService.updateOrderStatus(user.uid, orderId, newStatus);
+    return result;
+  };
+
   const startEditOrder = (order) => {
-    console.log('Sipariş düzenleme başlatılıyor:', order.id);
-    
     setEditingOrder(order.id);
     setEditOrderForm(order.items.map(item => ({ ...item })));
     setEditOrderDate(new Date(order.date).toISOString().slice(0,16));
+    setEditOrderStatus(order.status || ORDER_STATUS.UNPAID);
   };
 
-  // Sipariş düzenleme kaydetme
   const saveEditOrder = async () => {
-    if (!editingOrder || !user) {
-      return { success: false, error: 'Gerekli bilgiler bulunamadı.' };
-    }
-    
+    if (!editingOrder || !user) return { success: false, error: 'Gerekli bilgiler bulunamadı.' };
     const originalOrder = orders.find(order => order.id === editingOrder);
-    if (!originalOrder) {
-      return { success: false, error: 'Orijinal sipariş bulunamadı.' };
-    }
-
-    console.log('Sipariş düzenleme kaydediliyor:', editingOrder);
-    
-    const result = await orderService.updateOrder(
-      user.uid, 
-      editingOrder, 
-      originalOrder, 
-      editOrderForm, 
-      editOrderDate
-    );
-    
+    if (!originalOrder) return { success: false, error: 'Orijinal sipariş bulunamadı.' };
+    const result = await orderService.updateOrder(user.uid, editingOrder, originalOrder, editOrderForm, editOrderDate, editOrderStatus);
     if (result.success) {
       setEditingOrder(null);
       setEditOrderForm([]);
       setEditOrderDate('');
-      return { success: true, message: 'Sipariş güncellendi!' };
-    } else {
-      return result;
+      setEditOrderStatus(ORDER_STATUS.UNPAID);
     }
+    return result;
   };
 
-  // Sipariş düzenleme iptal etme
   const cancelEditOrder = () => {
-    console.log('Sipariş düzenleme iptal edildi');
     setEditingOrder(null);
     setEditOrderForm([]);
     setEditOrderDate('');
+    setEditOrderStatus(ORDER_STATUS.UNPAID);
   };
 
-  // Hook'un döndürdüğü değerler
   return {
-    // State
     orders,
     loading,
     selectedProducts,
     editingOrder,
     editOrderForm,
     editOrderDate,
-    
-    // Setters
+    editOrderStatus,
+    newOrderStatus,
     setSelectedProducts,
     setEditOrderForm,
     setEditOrderDate,
-    
-    // Actions
+    setEditOrderStatus,
+    setNewOrderStatus,
     addOrder,
     deleteOrder,
     startEditOrder,
     saveEditOrder,
     cancelEditOrder,
-    
-    // Statistics
+    toggleOrderStatus,
     stats,
     chartData,
-    
-    // Utils
     ordersCount: orders.length,
     hasSelectedProducts: Object.values(selectedProducts).some(qty => qty > 0)
   };
