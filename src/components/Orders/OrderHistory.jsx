@@ -13,7 +13,7 @@ export default function OrderHistory({
     <div className="content-card">
       <div className="content-body">
         <div className="orders-list">
-          {orders.slice().reverse().map(o => (
+          {orders.map(o => (
             <OrderCard
               key={o.id}
               order={o}

@@ -2,9 +2,17 @@
 // Bu hook tüm authentication işlemlerini yönetir
 
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { 
+  onAuthStateChanged, 
+  signOut, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider
+} from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 
 export const useAuth = () => {
   // Authentication state
@@ -97,6 +105,59 @@ export const useAuth = () => {
     }
   };
 
+  // 🆕 Profil güncelleme fonksiyonu
+  const updateProfile = async (updateData) => {
+    try {
+      if (!user) {
+        throw new Error('Kullanıcı oturumu bulunamadı');
+      }
+
+      // Şifre güncellemesi varsa önce yeniden doğrulama yap
+      if (updateData.newPassword && updateData.currentPassword) {
+        try {
+          // Mevcut şifre ile yeniden doğrulama
+          const credential = EmailAuthProvider.credential(user.email, updateData.currentPassword);
+          await reauthenticateWithCredential(user, credential);
+          
+          // Yeni şifreyi güncelle
+          await updatePassword(user, updateData.newPassword);
+        } catch (error) {
+          console.error('Şifre güncelleme hatası:', error);
+          if (error.code === 'auth/wrong-password') {
+            throw new Error('Mevcut şifre yanlış');
+          } else if (error.code === 'auth/weak-password') {
+            throw new Error('Yeni şifre çok zayıf. En az 6 karakter olmalıdır');
+          } else {
+            throw new Error('Şifre güncellenirken hata oluştu');
+          }
+        }
+      }
+
+      // Firestore'daki profil bilgilerini güncelle
+      const userDocRef = doc(db, 'users', user.uid);
+      const profileUpdateData = {
+        updatedAt: new Date()
+      };
+
+      // Güncellenmesi gereken alanları ekle
+      if (updateData.businessTitle !== undefined) {
+        profileUpdateData.businessName = updateData.businessTitle.trim();
+      }
+      if (updateData.displayName !== undefined) {
+        profileUpdateData.ownerName = updateData.displayName.trim();
+      }
+
+      await updateDoc(userDocRef, profileUpdateData);
+
+      console.log('Profil başarıyla güncellendi');
+      return { success: true, message: 'Profil başarıyla güncellendi!' };
+
+    } catch (error) {
+      console.error('Profil güncelleme hatası:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // Çıkış yapma fonksiyonu
   const logout = async () => {
     try {
@@ -122,8 +183,9 @@ export const useAuth = () => {
     avatarLetter,
     // Fonksiyonlar
     login,
-    signup,  // 👈 Eksik olan signup fonksiyonu eklendi
+    signup,
     logout,
+    updateProfile, // 🆕 Yeni eklenen fonksiyon
     isAuthenticated: !!user
   };
 };

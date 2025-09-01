@@ -1,9 +1,11 @@
 // components/Layout/Sidebar.jsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { 
   Home, Box, ShoppingCart, User, Settings, LogOut, ChevronUp 
 } from 'lucide-react';
 import { TABS } from '../../utils/constants';
+import ProfilePage from '../Profile/ProfilePage';
+import SettingsPage from '../Settings/SettingsPage';
 
 const Sidebar = ({ 
   isOpen, 
@@ -18,6 +20,8 @@ const Sidebar = ({
   onLogout
 }) => {
   const profileRef = useRef(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Profile dropdown - click outside & ESC
   useEffect(() => {
@@ -28,7 +32,11 @@ const Sidebar = ({
     };
     
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') setProfileDropdownOpen(false);
+      if (e.key === 'Escape') {
+        setProfileDropdownOpen(false);
+        setShowProfileModal(false);
+        setShowSettingsModal(false);
+      }
     };
     
     if (profileDropdownOpen) {
@@ -71,6 +79,24 @@ const Sidebar = ({
       }
     }
   ];
+
+  const handleProfileClick = () => {
+    setShowProfileModal(true);
+    setProfileDropdownOpen(false);
+  };
+
+  const handleSettingsClick = () => {
+    setShowSettingsModal(true);
+    setProfileDropdownOpen(false);
+  };
+
+  const handleProfileModalClose = () => {
+    setShowProfileModal(false);
+  };
+
+  const handleSettingsModalClose = () => {
+    setShowSettingsModal(false);
+  };
 
   return (
     <>
@@ -126,10 +152,16 @@ const Sidebar = ({
           {/* Profile Dropdown */}
           {profileDropdownOpen && (
             <div className="profile-dropdown">
-              <button className="profile-dropdown-item">
+              <button 
+                className="profile-dropdown-item"
+                onClick={handleProfileClick}
+              >
                 <User className="nav-icon" /> Profil Bilgileri
               </button>
-              <button className="profile-dropdown-item">
+              <button 
+                className="profile-dropdown-item"
+                onClick={handleSettingsClick}
+              >
                 <Settings className="nav-icon" /> Ayarlar
               </button>
               <button className="profile-dropdown-item" onClick={onLogout}>
@@ -139,6 +171,18 @@ const Sidebar = ({
           )}
         </div>
       </div>
+
+      {/* Profile Modal */}
+      <ProfilePage 
+        isOpen={showProfileModal} 
+        onClose={handleProfileModalClose} 
+      />
+
+      {/* Settings Modal */}
+      <SettingsPage 
+        isOpen={showSettingsModal} 
+        onClose={handleSettingsModalClose} 
+      />
     </>
   );
 };
