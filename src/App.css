@@ -3122,3 +3122,484 @@ input:checked + .toggle-slider:before {
 .dark .chart-card:hover {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
+
+/* Sipariş Durumu Seçici - Modern Toggle Switch Tasarımı */
+.order-status-section {
+  margin: 25px 0;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+.order-status-section h3 {
+  margin: 0 0 15px 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.status-selector {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Modern Radio Button Tasarımı */
+.radio-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  padding: 12px 20px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  user-select: none;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.radio-option:hover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Gerçek radio input'u gizle */
+.radio-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Radio label stilini özelleştir */
+.radio-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  position: relative;
+  padding-left: 30px;
+  transition: all 0.3s ease;
+}
+
+/* Custom radio button */
+.radio-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  transition: all 0.3s ease;
+}
+
+/* Radio button içi nokta */
+.radio-label::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%) scale(0);
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+/* Seçili durum */
+.radio-option input[type="radio"]:checked + .radio-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.radio-option input[type="radio"]:checked + .radio-label::before {
+  border-color: #3b82f6;
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.radio-option input[type="radio"]:checked + .radio-label::after {
+  transform: translateY(-50%) scale(1);
+  background: white;
+}
+
+.radio-option input[type="radio"]:checked {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-color: #3b82f6;
+  color: white;
+}
+
+/* Seçili durumda card background */
+.radio-option:has(input[type="radio"]:checked) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(29, 78, 216, 0.05));
+  border-color: #3b82f6;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+}
+
+/* Ödedi durumu için yeşil tema */
+.radio-option input[value="paid"]:checked + .radio-label::before {
+  border-color: #10b981;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.radio-option input[value="paid"]:checked + .radio-label::after {
+  background: white;
+}
+
+.radio-option:has(input[value="paid"]:checked) {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05));
+  border-color: #10b981;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+}
+
+.radio-option:has(input[value="paid"]:checked):hover {
+  border-color: #059669;
+  box-shadow: 0 6px 25px rgba(16, 185, 129, 0.25);
+}
+
+/* Ödenmedi durumu için turuncu tema */
+.radio-option input[value="unpaid"]:checked + .radio-label::before {
+  border-color: #f59e0b;
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.radio-option input[value="unpaid"]:checked + .radio-label::after {
+  background: white;
+}
+
+.radio-option:has(input[value="unpaid"]:checked) {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05));
+  border-color: #f59e0b;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+}
+
+.radio-option:has(input[value="unpaid"]:checked):hover {
+  border-color: #d97706;
+  box-shadow: 0 6px 25px rgba(245, 158, 11, 0.25);
+}
+
+/* Focus durumu accessibility için */
+.radio-option input[type="radio"]:focus + .radio-label::before {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Animasyonlar */
+@keyframes radioSelect {
+  0% { transform: translateY(-50%) scale(0) rotate(0deg); }
+  50% { transform: translateY(-50%) scale(1.2) rotate(180deg); }
+  100% { transform: translateY(-50%) scale(1) rotate(360deg); }
+}
+
+.radio-option input[type="radio"]:checked + .radio-label::after {
+  animation: radioSelect 0.4s ease-out;
+}
+
+/* Responsive tasarım */
+@media (max-width: 768px) {
+  .status-selector {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .radio-option {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .order-status-section {
+    padding: 16px;
+    margin: 20px 0;
+  }
+}
+
+/* Karanlık tema için ek ayarlar */
+.dark .radio-label::before {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+.dark .radio-option {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+.dark .radio-option:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Modern Tarih Seçici Tasarımı */
+.order-date-input {
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.order-date-input:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
+}
+
+.order-date-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.02);
+}
+
+/* Tarih seçici ikon efekti */
+.order-date-input::before {
+  content: '📅';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+/* Tarih seçici açılır menü stilleri */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3e%3c/rect%3e%3cline x1='16' y1='2' x2='16' y2='6'%3e%3c/line%3e%3cline x1='8' y1='2' x2='8' y2='6'%3e%3c/line%3e%3cline x1='3' y1='10' x2='21' y2='10'%3e%3c/line%3e%3c/svg%3e") no-repeat center;
+  background-size: 18px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background-size: 20px;
+}
+
+/* Firefox için tarih seçici stilleri */
+input[type="datetime-local"]::-moz-calendar-picker-indicator {
+  background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3e%3c/rect%3e%3cline x1='16' y1='2' x2='16' y2='6'%3e%3c/line%3e%3cline x1='8' y1='2' x2='8' y2='6'%3e%3c/line%3e%3cline x1='3' y1='10' x2='21' y2='10'%3e%3c/line%3e%3c/svg%3e") no-repeat center;
+  background-size: 18px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+/* Tarih input container */
+.date-input-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.date-input-container::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  transition: width 0.3s ease;
+  z-index: 1;
+}
+
+.date-input-container:focus-within::before {
+  width: 100%;
+}
+
+/* Tarih label stilleri */
+.date-input-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  position: relative;
+}
+
+.date-input-label::after {
+  content: '*';
+  color: #ef4444;
+  margin-left: 4px;
+  font-weight: bold;
+}
+
+/* Geçersiz tarih durumu */
+.order-date-input:invalid {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.order-date-input:invalid:focus {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+/* Başarılı validasyon */
+.order-date-input:valid {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.02);
+}
+
+.order-date-input:valid::after {
+  content: '✓';
+  position: absolute;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #10b981;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* Animasyonlu placeholder efekti */
+.date-input-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.floating-label {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  background: var(--bg-secondary);
+  padding: 0 6px;
+  z-index: 2;
+}
+
+.order-date-input:focus + .floating-label,
+.order-date-input:not(:placeholder-shown) + .floating-label,
+.order-date-input:valid + .floating-label {
+  top: 0;
+  font-size: 0.8rem;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+/* Karanlık tema uyumluluğu */
+.dark .order-date-input {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.dark .order-date-input:hover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.dark .order-date-input:focus {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.dark .floating-label {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Takvim açılır menü stilleri (Webkit) */
+.order-date-input::-webkit-calendar-picker-indicator {
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.order-date-input::-webkit-calendar-picker-indicator:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+/* Responsive tasarım */
+@media (max-width: 768px) {
+  .order-date-input {
+    width: 100%;
+    min-width: auto;
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+  
+  .date-input-container {
+    width: 100%;
+  }
+  
+  .floating-label {
+    left: 16px;
+  }
+}
+
+/* Özel takvim dropdown stilleri (gelecek sürümler için) */
+.custom-calendar-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 16px;
+  margin-top: 4px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.custom-calendar-dropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Tarih input animasyonu */
+@keyframes dateInputFocus {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.order-date-input:focus {
+  animation: dateInputFocus 0.3s ease-out;
+}
+
+/* Gradient border efekti */
+.order-date-input.premium {
+  background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+              linear-gradient(135deg, #3b82f6, #1d4ed8, #10b981) border-box;
+  border: 2px solid transparent;
+}
+
+.order-date-input.premium:focus {
+  background: linear-gradient(rgba(59, 130, 246, 0.02), rgba(59, 130, 246, 0.02)) padding-box,
+              linear-gradient(135deg, #3b82f6, #1d4ed8, #10b981) border-box;
+}

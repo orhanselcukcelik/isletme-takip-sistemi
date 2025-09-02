@@ -138,7 +138,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
   const handleResetSettings = () => {
     if (window.confirm('Tüm ayarları varsayılan değerlere döndürmek istediğinizden emin misiniz?')) {
       const defaultSettings = {
-        theme: 'auto',
+        theme: 'dark',
         language: 'tr',
         fontSize: 'medium',
         compactMode: false,
