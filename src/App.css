@@ -3603,3 +3603,4 @@ input[type="datetime-local"]::-moz-calendar-picker-indicator {
   background: linear-gradient(rgba(59, 130, 246, 0.02), rgba(59, 130, 246, 0.02)) padding-box,
               linear-gradient(135deg, #3b82f6, #1d4ed8, #10b981) border-box;
 }
+  
