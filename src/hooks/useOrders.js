@@ -351,7 +351,6 @@ export const useOrders = (user, products = [], customDateRange = null, notificat
     return baseChartData;
   }, [orders, customDateRange]);
 
-  // add/delete/update/toggle etc. (kısaltılmış, eskisi gibi bırakabilirsiniz)
   const addOrder = async () => {
     if (!user) return { success: false, error: 'Önce giriş yapmalısınız.' };
     const selectedCount = Object.values(selectedProducts).filter(q => q > 0).length;
@@ -400,13 +399,41 @@ export const useOrders = (user, products = [], customDateRange = null, notificat
     if (!editingOrder || !user) return { success: false, error: 'Gerekli bilgiler bulunamadı.' };
     const originalOrder = orders.find(order => order.id === editingOrder);
     if (!originalOrder) return { success: false, error: 'Orijinal sipariş bulunamadı.' };
-    const result = await orderService.updateOrder(user.uid, editingOrder, originalOrder, editOrderForm, editOrderDate, editOrderStatus);
+    
+    // Quantity'si 0 olan ürünleri filtrele (boş bırakılan ürünleri çıkar)
+    const filteredEditOrderForm = editOrderForm.filter(item => {
+      const qty = parseInt(item.quantity) || 0;
+      return qty > 0;
+    });
+    
+    // Eğer tüm ürünler silindiyse hata ver
+    if (filteredEditOrderForm.length === 0) {
+      return { success: false, error: 'Sipariş en az bir ürün içermelidir. Lütfen en az bir ürün için geçerli miktar giriniz.' };
+    }
+    
+    console.log('Sipariş kaydediliyor:', {
+      originalItemCount: editOrderForm.length,
+      validItemCount: filteredEditOrderForm.length,
+      removedItemCount: editOrderForm.length - filteredEditOrderForm.length
+    });
+    
+    const result = await orderService.updateOrder(user.uid, editingOrder, originalOrder, filteredEditOrderForm, editOrderDate, editOrderStatus);
+    
     if (result.success) {
       setEditingOrder(null);
       setEditOrderForm([]);
       setEditOrderDate('');
       setEditOrderStatus(ORDER_STATUS.UNPAID);
+      
+      // Başarı mesajına silinen ürün bilgisini ekle
+      const removedCount = editOrderForm.length - filteredEditOrderForm.length;
+      let message = 'Sipariş başarıyla güncellendi!';
+      if (removedCount > 0) {
+        message += ` (${removedCount} ürün siparişten çıkarıldı)`;
+      }
+      return { success: true, message };
     }
+    
     return result;
   };
 
@@ -416,6 +443,7 @@ export const useOrders = (user, products = [], customDateRange = null, notificat
     setEditOrderDate('');
     setEditOrderStatus(ORDER_STATUS.UNPAID);
   };
+
 
   return {
     orders,

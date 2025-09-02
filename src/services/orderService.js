@@ -132,22 +132,53 @@ export const orderService = {
     console.log('Sipariş güncelleniyor:', orderId);
     
     try {
-      const processedItems = updatedItems.map(item => {
-        const totalRevenue = item.sellPrice * item.quantity;
-        const totalTax = totalRevenue * (item.taxRate / 100);
+      // Boş sipariş kontrolü
+      if (!updatedItems || updatedItems.length === 0) {
+        throw new Error('Sipariş en az bir ürün içermeli.');
+      }
+
+      // 0 veya negatif quantity olan itemları filtrele (quantity 0 olanlar silinmiş sayılır)
+      const validItems = updatedItems.filter(item => {
+        const qty = parseInt(item.quantity) || 0;
+        return qty > 0;
+      });
+      
+      console.log('Geçerli ürünler filtrelendi:', validItems.length, 'adet');
+      
+      if (validItems.length === 0) {
+        throw new Error('Sipariş en az bir ürün içermeli. Lütfen en az bir ürün için geçerli miktar giriniz.');
+      }
+
+      // İtem hesaplamalarını yap
+      const processedItems = validItems.map(item => {
+        const quantity = parseInt(item.quantity) || 0;
+        const sellPrice = parseFloat(item.sellPrice) || 0;
+        const costPrice = parseFloat(item.costPrice) || 0;
+        const taxRate = parseFloat(item.taxRate) || 0;
+        
+        const totalRevenue = sellPrice * quantity;
+        const totalTax = totalRevenue * (taxRate / 100);
+        const totalCost = costPrice * quantity;
+        
         return {
           ...item,
+          quantity,
+          sellPrice,
+          costPrice,
+          taxRate,
           totalRevenue,
           totalTax,
-          totalCost: item.costPrice * item.quantity
+          totalCost
         };
       });
 
+      // Toplam hesaplamalar
       const totalRevenue = processedItems.reduce((sum, item) => sum + item.totalRevenue, 0);
       const totalCost = processedItems.reduce((sum, item) => sum + item.totalCost, 0);
       const totalTax = processedItems.reduce((sum, item) => sum + item.totalTax, 0);
       const profit = totalRevenue - totalCost;
 
+      // Siparişi güncelle
       const orderRef = doc(db, "users", userId, "orders", orderId);
       await updateDoc(orderRef, {
         date: new Date(updatedDate).toISOString(),
@@ -159,10 +190,11 @@ export const orderService = {
         status: updatedStatus
       });
 
+      // Stok güncellemelerini yap
       await orderService.updateStockDifferences(userId, originalOrder.items, processedItems);
 
       console.log('Sipariş başarıyla güncellendi');
-      return { success: true };
+      return { success: true, message: 'Sipariş başarıyla güncellendi!' };
       
     } catch (error) {
       console.error('Sipariş güncelleme hatası:', error);
@@ -217,16 +249,19 @@ export const orderService = {
     console.log('Stok farkları hesaplanıyor');
     const stockChanges = {};
 
+    // Orijinal siparişten stokları geri ekle
     originalItems.forEach(item => {
       if (!stockChanges[item.productId]) stockChanges[item.productId] = 0;
       stockChanges[item.productId] += item.quantity;
     });
 
+    // Yeni siparişten stokları düş
     updatedItems.forEach(item => {
       if (!stockChanges[item.productId]) stockChanges[item.productId] = 0;
       stockChanges[item.productId] -= item.quantity;
     });
 
+    // Değişiklik olan stokları güncelle
     const promises = Object.entries(stockChanges)
       .filter(([_, change]) => change !== 0)
       .map(([productId, change]) => {

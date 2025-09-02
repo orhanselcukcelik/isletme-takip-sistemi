@@ -96,15 +96,31 @@ export default function OrderCard({
               <div className="item-quantity">
                 <label>Adet:</label>
                 <input
-                  type="number" min="1" value={item.quantity}
+                  type="number" 
+                  min="0"
+                  value={item.quantity === 0 ? "" : item.quantity}
                   onChange={e => {
-                    const q = Math.max(1, parseInt(e.target.value) || 1);
-                    const next = [...editOrderForm]; next[i] = { ...item, quantity: q }; setEditOrderForm(next);
+                    const raw = e.target.value;
+                    let newQuantity;
+                    
+                    // Eğer input boş ise, quantity'yi 0 yap (görsel olarak boş kalacak)
+                    if (raw === "") {
+                      newQuantity = 0;
+                    } else {
+                      // Normal sayı işleme
+                      const parsedValue = parseInt(raw);
+                      newQuantity = isNaN(parsedValue) || parsedValue < 0 ? 0 : parsedValue;
+                    }
+                    
+                    const next = [...editOrderForm];
+                    next[i] = { ...item, quantity: newQuantity };
+                    setEditOrderForm(next);
                   }}
                   className="quantity-edit-input"
+                  placeholder="0"
                 />
               </div>
-              <span className="item-total">{formatCurrency(item.sellPrice * item.quantity)}</span>
+              <span className="item-total">{formatCurrency(item.sellPrice * (item.quantity || 0))}</span>
             </div>
           ))
         ) : (
